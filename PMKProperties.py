@@ -1,4 +1,5 @@
 ﻿import os
+import bpy
 from bpy.props import *
 
 bl_info = {
@@ -16,18 +17,61 @@ class TechInfo(bpy.types.PropertyGroup):
     price = FloatProperty(default = 10000)
     requiredExp = FloatProperty(default = 10000)
 
+def change_module_type(self, context):
+    print(self.moduleType, context.object.name)
+
 class CommonProperties(bpy.types.PropertyGroup):
     '''Common module properties '''
-    type = EnumProperty(items = (('Empty', 'Empty', 'The zeroth item'),
-                                 ('Hull', 'Hull', 'The first item'),
-                                 ('Turret', 'Turret', 'The second item'),
-                                 ('Mantlet', 'Mantlet', 'The second item'),
-                                 ('Gun', 'Gun', 'The third item'),
-                                 ('Suspension', 'Suspension', 'The third item')
+    objectType = EnumProperty(items = (('Mesh', 'Mesh', 'The zeroth item'),
+                                       ('Collision', 'Collision', 'The second item'),
+                                       ('Armor', 'Armor', 'The first item')
                                  ),
-                        name = "fixed list",
-                        default = 'Empty')
+                        name = "ObjectType",
+                        default = 'Mesh')
+    moduleType = EnumProperty(items = (('Empty', 'Empty', 'The zeroth item'),
+                                       ('Hull', 'Hull', 'The first item'),
+                                       ('Turret', 'Turret', 'The second item'),
+                                       ('Mantlet', 'Mantlet', 'The second item'),
+                                       ('Gun', 'Gun', 'The third item'),
+                                       ('Suspension', 'Suspension', 'The third item'),
+                                 ),
+                        name = "Type",
+                        default = 'Empty',
+                        update = change_module_type)
     requiredExp = FloatProperty(default = 10000)
+    hitpoints = FloatProperty(default = 100)
+    tier = EnumProperty(items = (('0', 'I', 'The zeroth item'),
+                                 ('1', 'II', 'The first item'),
+                                 ('2', 'III', 'The second item'),
+                                 ('3', 'IV', 'The second item'),
+                                 ('4', 'V', 'The third item'),
+                                 ('5', 'VI', 'The third item'),
+                                 ),
+                        name = "Tier",
+                        default = '0')
+
+    """ --------- Hull --------- """
+    """ --------- Turret --------- """
+    rotateVelocity = FloatProperty(default = 1, name = 'Velocity')
+    # na update przelicz ilość ammo danego kalibru
+    ammoCapacity = FloatProperty(default = 100, name = 'Ammo capacity')
+    """ --------- Mantlet --------- """
+    minVertical = FloatProperty(default = -0.2, name = 'Min')
+    maxVertical = FloatProperty(default = 0.2, name = 'Max')
+    """ --------- GUN --------- """
+    dispersion = FloatProperty(default = 0.1, name = 'Dispersion')
+    accuracy = FloatProperty(default = 0.03, name = 'Accuracy')
+    caliber = EnumProperty(items = (('100', '100mm', 'The zeroth item'),
+                                    ('105', '105mm', 'The second item'),
+                                    ('120', '120mm', 'The first item'),
+                                    ('125', '125mm', 'The first item'),
+                                    ('135', '135mm', 'The first item'),
+                                    ('150', '150mm', 'The first item'),
+                                    ('152', '152mm', 'The first item'),
+                                 ),
+                        name = "Caliber",
+                        default = '120')
+    """ --------- Suspension --------- """
 
 def register():
     print('\nregistering ', 'BaseStructs')
