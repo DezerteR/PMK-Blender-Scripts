@@ -22,9 +22,11 @@ def change_module_type(self, context):
 
 class CommonProperties(bpy.types.PropertyGroup):
     '''Common module properties '''
+    prettyName = StringProperty(default = '--')
     objectType = EnumProperty(items = (('Mesh', 'Mesh', 'The zeroth item'),
                                        ('Collision', 'Collision', 'The second item'),
-                                       ('Armor', 'Armor', 'The first item')
+                                       ('Armor', 'Armor', 'The first item'),
+                                       ('Slot', 'Slot', 'The first item'),
                                  ),
                         name = "ObjectType",
                         default = 'Mesh')
@@ -34,6 +36,8 @@ class CommonProperties(bpy.types.PropertyGroup):
                                        ('Mantlet', 'Mantlet', 'The second item'),
                                        ('Gun', 'Gun', 'The third item'),
                                        ('Suspension', 'Suspension', 'The third item'),
+                                       ('Armor', 'Armor', 'The third item'),
+                                       ('Camera', 'Camera', 'The third item'),
                                  ),
                         name = "Type",
                         default = 'Empty',
@@ -72,6 +76,7 @@ class CommonProperties(bpy.types.PropertyGroup):
                         name = "Caliber",
                         default = '120')
     """ --------- Suspension --------- """
+    """ --------- Camera --------- """
 
 def register():
     print('\nregistering ', 'BaseStructs')

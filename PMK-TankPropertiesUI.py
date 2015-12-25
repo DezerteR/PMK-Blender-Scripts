@@ -37,15 +37,14 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
             self.specificProperties(obj, layout.box())
 
     def commonProperties(self, obj, layout):
-        column = layout.column()
-        column.label(text="Common properties")
-        column = layout.column()
-        column.prop(obj, "name")
-        row = layout.row()
-        row.prop(obj.common, "objectType", expand=True)
+
+        # layout.column().operator(operator = 'TankInfoExporter.vehicle_info.yml()', text="Export Info")
+        layout.column().label(text="Common properties")
+        layout.column().prop(obj, "name")
+        layout.column().prop(obj.common, "prettyName")
+        row = layout.row().prop(obj.common, "objectType", expand=True)
         if obj.common.objectType == 'Mesh':
-            column = layout.column()
-            column.prop(obj.common, "moduleType")
+            column = layout.column().prop(obj.common, "moduleType")
             return True
         return False
 
@@ -97,7 +96,6 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
 
     def drawSuspension(self, obj, layout):
         pass
-
 
 def register():
     print('\nregistering ', 'Tank Modules')
