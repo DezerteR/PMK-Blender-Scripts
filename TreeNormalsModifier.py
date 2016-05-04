@@ -3,12 +3,12 @@
 import bpy
 import BaseStructs
 bl_info = {
-    "name": "Lesson one",
+    "name": "Tree normals",
     "author": "DezerteR",
     "version": (0, 0, 1),
     "blender": (2, 7, 6),
     "location": "Viewport",
-    "description": "Lesson one, nothing more",
+    "description": "Set tree normals to point outside",
     "category": "Object"}
 
 import bpy

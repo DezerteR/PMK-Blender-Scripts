@@ -1,6 +1,6 @@
 import os
 import bpy
-import PMKProperties
+import PMK_TankProperties
 
 bl_info = {
     "name": "PMK Panel",
@@ -95,7 +95,14 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
         layout.column().prop(obj, "caliber")
 
     def drawSuspension(self, obj, layout):
-        pass
+        layout.column().prop(obj, "stiffness")
+        layout.column().prop(obj, "damping")
+        layout.column().prop(obj, "compression")
+        layout.column().prop(obj, "wheel_friction")
+        layout.column().prop(obj, "max_travel")
+        layout.column().prop(obj, "max_force")
+        layout.column().prop(obj, "roll_influence")
+        layout.column().prop(obj, "shoe_mesh")
 
 def register():
     print('\nregistering ', 'Tank Modules')

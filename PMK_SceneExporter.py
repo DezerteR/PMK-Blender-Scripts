@@ -56,13 +56,15 @@ def writeQuaternion(file, object, offset):
 def writeMaterial(file, object, o):
 	file.write(o + '  Material:')
 
-	tex = object.data.uv_textures.active.data[0].image.name
+	tex = object.data.uv_textures.active.data[0].image
 
 	if tex:
-		file.write(o + '    Texture: ' + tex)
+		file.write(o + '    Texture: ' + tex.name)
 	else:
 		file.write(o + '    Texture: --empty--')
 
+	if object.scene.objectType == 'Glossy':
+		file.write(o + '    Glossy: ' + str(object.scene.glossEnergy))
 
 	mat = object.active_material
 	if mat:
@@ -133,6 +135,7 @@ def writeLamps(file, objects, offset):
 	offset = offset + ' '
 	for object in objects:
 		if object.type == 'LAMP':
+			print(object.name)
 			file.write(offset + '- Name: ' + object.name)
 			# object = bpy.data.objects[lamp.name]
 
@@ -145,8 +148,8 @@ def writeLamps(file, objects, offset):
 			file.write(offset + '  Energy: ' + tstr(lamp.energy))
 			file.write(offset + '  Type: ' + lamp.type)
 
-			# if lamp.type == 'POINT':
-				# file.write(offset + '  falloff_type: ' + lamp.falloff_type)
+			if lamp.type == 'POINT':
+				file.write(offset + '  falloff_type: ' + lamp.falloff_type)
 
 			if lamp.type == 'SPOT':
 				# file.write(offset + '  falloff_type: ' + lamp.falloff_type)
@@ -222,7 +225,7 @@ class ExportMyFormat(bpy.types.Operator, ExportHelper):
 		# file.write('\nRobot:')
 		# writeRobot(file, bpy.data.objects['Robot-Base'].children[0])
 		# writeScene(file, bpy.data.objects, offset, path, name)
-		# writeLamps(file, bpy.data.objects, offset)
+		writeLamps(file, bpy.data.objects, '\n')
 
 		file.close()
 		return {'FINISHED'};

@@ -36,6 +36,9 @@ class CommonProperties(bpy.types.PropertyGroup):
                                        ('Mantlet', 'Mantlet', 'The second item'),
                                        ('Gun', 'Gun', 'The third item'),
                                        ('Suspension', 'Suspension', 'The third item'),
+                                       ('MainWheel', 'Main Wheel', 'The third item'),
+                                       ('SupportWheel', 'Support Wheel', 'The third item'),
+                                       ('DriveWheel', 'Drive Wheel', 'The third item'),
                                        ('Armor', 'Armor', 'The third item'),
                                        ('Camera', 'Camera', 'The third item'),
                                  ),
@@ -76,6 +79,14 @@ class CommonProperties(bpy.types.PropertyGroup):
                         name = "Caliber",
                         default = '120')
     """ --------- Suspension --------- """
+    stiffness = FloatProperty(default = 60, name = 'Stiffness')
+    damping = FloatProperty(default = 0.3, name = 'Damping')
+    compression = FloatProperty(default = 0.5, name = 'Compression')
+    max_travel = FloatProperty(default = 0.5, name = 'maxTravel')
+    max_force = FloatProperty(default = 5000000, name = 'maxForce')
+    wheel_friction = FloatProperty(default = 100, name = 'WheelFriction')
+    roll_influence = FloatProperty(default = 0.1, name = 'RollInfluence')
+    shoe_mesh = StringProperty(default = 'Shoe', name = 'ShoeMesh');
     """ --------- Camera --------- """
 
 def register():
