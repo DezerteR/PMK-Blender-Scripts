@@ -74,6 +74,8 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         if obj.data is not None:
             file.write(offset + '    Mesh: ' + obj.data.name + '\n')
         file.write(offset + '    PrettyName: ' + obj.common.prettyName + '\n')
+        self.write_decals(file, obj, offset+'    ')
+
     def write_module_properties(self, file, obj, offset):
         info = obj.common
         file.write(offset + '    Type: ' + str(info.objectType) + '\n')
@@ -165,6 +167,20 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
             file.write(offset + '    Axis: ' + vec_to_str_0(it.matrix_world*right_vector)+ '\n')
             file.write(offset + '    Dimension: ' + vec_to_str_0(it.dimensions)+ '\n')
             file.write(offset + '    Position: ' + vec_to_str_1(it.location)+ '\n')
+    def write_decals(self, file, obj, offset):
+        decals = []
+        for child in obj.children:
+            if child.common.objectType == 'Decal':
+                decals.append(child);
+        if len(decals) > 0:
+            file.write(offset + 'Decals:\n')
+        for decal in decals:
+            file.write(offset + '  - Layer: ' + decal.common.decal_name + '\n')
+            file.write(offset + '    Scale: ' + vec_to_str_0(decal.scale) + '\n')
+            file.write(offset + '    Position: ' + vec_to_str_1(vec_from_to(obj, decal)) + '\n')
+            file.write(offset + '    LocX: ' + vec_to_str_0(decal.matrix_local*mathutils.Vector((1.0, 0.0, 0.0, 0.0))) + '\n')
+            file.write(offset + '    LocZ: ' + vec_to_str_0(decal.matrix_local*mathutils.Vector((0.0, 0.0, 1.0, 0.0))) + '\n')
+
 
 def menu_func(self, context):
     self.layout.operator(TankInfoExporter.bl_idname, text="PMK Tank Info(.yml)")

@@ -27,6 +27,8 @@ class CommonProperties(bpy.types.PropertyGroup):
                                        ('Collision', 'Collision', 'The second item'),
                                        ('Armor', 'Armor', 'The first item'),
                                        ('Slot', 'Slot', 'The first item'),
+                                       ('Decal', 'Decal', '...'),
+                                       ('Marker', 'Marker', '...'),
                                  ),
                         name = "ObjectType",
                         default = 'Mesh')
@@ -86,8 +88,12 @@ class CommonProperties(bpy.types.PropertyGroup):
     max_force = FloatProperty(default = 5000000, name = 'maxForce')
     wheel_friction = FloatProperty(default = 100, name = 'WheelFriction')
     roll_influence = FloatProperty(default = 0.1, name = 'RollInfluence')
-    shoe_mesh = StringProperty(default = 'Shoe', name = 'ShoeMesh');
+    shoe_mesh = StringProperty(default = 'Shoe', name = 'ShoeMesh')
     """ --------- Camera --------- """
+    """ --------- Decal --------- """
+    decal_name = StringProperty(default = '', name = 'DecalName')
+    """ --------- Marker --------- """
+
 
 def register():
     print('\nregistering ', 'BaseStructs')

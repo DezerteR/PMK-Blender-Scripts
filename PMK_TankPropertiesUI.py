@@ -46,6 +46,11 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
         if obj.common.objectType == 'Mesh':
             column = layout.column().prop(obj.common, "moduleType")
             return True
+        elif obj.common.objectType == 'Decal':
+            layout.column().prop(obj.common, "decal_name")
+            return False
+        elif obj.common.objectType == 'Marker':
+            return False
         return False
 
     def setModuleType(self, context, layout):
@@ -103,6 +108,10 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
         layout.column().prop(obj, "max_force")
         layout.column().prop(obj, "roll_influence")
         layout.column().prop(obj, "shoe_mesh")
+
+    def editDecal(self, common, layout):
+        layout.box().column().prop(common.decal_name)
+
 
 def register():
     print('\nregistering ', 'Tank Modules')
