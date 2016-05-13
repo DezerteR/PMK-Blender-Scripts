@@ -35,6 +35,7 @@ def vec_to_str_1(vec):
 right_vector = mathutils.Vector((1.0, 0.0, 0.0, 0.0))
 up_vector = mathutils.Vector((0.0, 0.0, 1.0, 0.0))
 forward_vector = mathutils.Vector((0.0, 1.0, 0.0, 0.0))
+zero_position = mathutils.Vector((0.0, 0.0, 0.0, 1.0))
 
 class TankInfoExporter(bpy.types.Operator, ExportHelper):
     bl_idname       = "vehicle_info.yml"
@@ -177,9 +178,14 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         for decal in decals:
             file.write(offset + '  - Layer: ' + decal.common.decal_name + '\n')
             file.write(offset + '    Scale: ' + vec_to_str_0(decal.scale) + '\n')
-            file.write(offset + '    Position: ' + vec_to_str_1(vec_from_to(obj, decal)) + '\n')
-            file.write(offset + '    LocX: ' + vec_to_str_0(decal.matrix_local*mathutils.Vector((1.0, 0.0, 0.0, 0.0))) + '\n')
-            file.write(offset + '    LocZ: ' + vec_to_str_0(decal.matrix_local*mathutils.Vector((0.0, 0.0, 1.0, 0.0))) + '\n')
+            file.write(offset + '    Position: ' + vec_to_str_1(vec_from_to(decal, obj)) + '\n')
+            # file.write(offset + '    Position: ' + vec_to_str_1(decal.matrix_local*zero_position) + '\n')
+            locx = decal.matrix_local*right_vector
+            locx.normalize()
+            locz = decal.matrix_local*up_vector
+            locz.normalize()
+            file.write(offset + '    LocX: ' + vec_to_str_0(locx) + '\n')
+            file.write(offset + '    LocZ: ' + vec_to_str_0(locz) + '\n')
 
 
 def menu_func(self, context):

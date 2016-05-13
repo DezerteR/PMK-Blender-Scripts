@@ -3,7 +3,7 @@ import bpy
 from bpy.props import *
 
 bl_info = {
-    "name": "PMK module properties",
+    "name": "PMK tank properties",
     "author": "DezerteR",
     "version": (0, 0, 1),
     "blender": (2, 7, 6),
@@ -11,6 +11,33 @@ bl_info = {
     "description": "Adds panel in object properties that allows editing tank module properties.",
     "category": "Object"
     }
+
+def register():
+    print('\nregistering ', 'Tank properties')
+    bpy.utils.register_class(SlotProperties)
+    bpy.utils.register_class(ModuleProperties)
+    bpy.utils.register_class(CollisonModelProperties)
+    bpy.utils.register_class(ArmorProperties)
+    bpy.utils.register_class(DecalProperties)
+    bpy.utils.register_class(MarkerProperties)
+    bpy.utils.register_class(TechInfo)
+    bpy.utils.register_class(CommonProperties)
+    bpy.types.Object.pmk = PointerProperty(type=CommonProperties)
+
+def unregister():
+    del bpy.types.Object.pmk
+    bpy.utils.unregister_class(CommonProperties)
+    bpy.utils.unregister_class(TechInfo)
+    bpy.utils.unregister_class(MarkerProperties)
+    bpy.utils.unregister_class(DecalProperties)
+    bpy.utils.unregister_class(ArmorProperties)
+    bpy.utils.unregister_class(CollisonModelProperties)
+    bpy.utils.unregister_class(ModuleProperties)
+    bpy.utils.unregister_class(SlotProperties)
+
+if __name__ == "__main__":
+    register()
+
 
 class TechInfo(bpy.types.PropertyGroup):
     '''Module technology properties '''
@@ -34,11 +61,11 @@ class ModuleProperties(bpy.types.PropertyGroup):
                                  ('DriveWheel', 'Drive Wheel', 'The third item'),
                                  ('Armor', 'Armor', 'Additional armor module'),
                                 ),
-                        name = "Type",
+                        name = "Module Class",
                         default = 'Empty',
                         update = change_module_type)
     """ --------- Common --------- """
-    required _exp = FloatProperty(default = 10000)
+    required_exp = FloatProperty(default = 10000)
     hitpoints = FloatProperty(default = 100)
     tier = EnumProperty(items = (('0', 'I', ''),
                                  ('1', 'II', ''),
@@ -91,9 +118,11 @@ class CollisonModelProperties(bpy.types.PropertyGroup):
     mass = FloatProperty(default = 1, name = 'Mass')
 
 class ArmorProperties(bpy.types.PropertyGroup):
-    pass
+    armor_class = FloatProperty(default = 1, name = 'Class')
+
 class SlotProperties(bpy.types.PropertyGroup):
-    pass
+    slot_name = StringProperty(default = '', name = 'SlotName')
+
 class DecalProperties(bpy.types.PropertyGroup):
     decal_name = StringProperty(default = '', name = 'DecalName')
 
@@ -119,42 +148,21 @@ class MarkerProperties(bpy.types.PropertyGroup):
 
 class CommonProperties(bpy.types.PropertyGroup):
     '''Common module properties '''
-    prettyName = StringProperty(default = '--')
-    objectType = EnumProperty(items = (('Mesh', 'Mesh', 'Module visual model'),
-                                       ('Collision', 'Collision', 'Module collison model'),
-                                       ('Armor', 'Armor', 'Module armor model'),
-                                       ('Slot', 'Slot', 'Module slot to join other modules'),
-                                       ('Decal', 'Decal', '...'),
-                                       ('Marker', 'Marker', '...'),
+    pretty_name = StringProperty(default = '--', name= 'Pretty Name')
+    property_type = EnumProperty(items = (('Module', 'Module', 'Module visual model'),
+                                          ('Collision', 'Collision', 'Module collison model'),
+                                          ('Armor', 'Armor', 'Module armor model'),
+                                          ('Slot', 'Slot', 'Module slot to join other modules'),
+                                          ('Decal', 'Decal', '...'),
+                                          ('Marker', 'Marker', '...'),
                                  ),
-                        name = "ObjectType",
-                        default = 'Mesh')
+                        name = "Property Type",
+                        default = 'Module')
 
-    module_properties = GroupProperty()
-    collision_properties = GroupProperty()
-    armor_properties = GroupProperty()
-    slot_properties = GroupProperty()
-    decal_properties = GroupProperty()
-    marker_properties = GroupProperty()
-
-    """ --------- Camera --------- """
-    """ --------- Decal --------- """
-    decal_name = StringProperty(default = '', name = 'DecalName')
-    """ --------- Marker --------- """
-
-
-def register():
-    print('\nregistering ', 'BaseStructs')
-    bpy.utils.register_class(TechInfo)
-    bpy.types.Object.techInfo = PointerProperty(type=TechInfo)
-    bpy.utils.register_class(CommonProperties)
-    bpy.types.Object.common = PointerProperty(type=CommonProperties)
-
-def unregister():
-    del bpy.types.Object.common
-    bpy.utils.unregister_class(CommonProperties)
-    del bpy.types.Object.techInfo
-    bpy.utils.unregister_class(TechInfo)
-
-if __name__ == "__main__":
-    register()
+    module_properties = PointerProperty(type = ModuleProperties)
+    collision_properties = PointerProperty(type = CollisonModelProperties)
+    armor_properties = PointerProperty(type = ArmorProperties)
+    slot_properties = PointerProperty(type = SlotProperties)
+    decal_properties = PointerProperty(type = DecalProperties)
+    marker_properties = PointerProperty(type = MarkerProperties)
+    tech_info = PointerProperty(type = TechInfo)
