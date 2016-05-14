@@ -46,18 +46,18 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         root = self.find_root(bpy.data.objects)
         file = open(self.filepath, 'w', encoding = 'utf8')
-        self.write_first_module(file, root, '')
+        self.start_model_exporting(file, root, '')
         file.close()
 
         return {'FINISHED'}
 
     def find_root(self, objects):
         for ob in objects:
-            if ob.common.moduleType == 'Hull':
+            if ob.pmk.module_properties.module_class == 'Hull':
                 return ob
     def write_tech_info(self, root):
         pass
-    def write_first_module(self, file, obj, offset):
+    def start_model_exporting(self, file, obj, offset):
         file.write('Model:\n')
         self.write_common_properties(file, obj, offset)
         self.write_module_properties(file, obj, offset)
@@ -66,7 +66,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
     def write_module(self, file, parent_slot, obj, offset):
         self.write_common_properties(file, obj, offset)
         position_offset = vec_from_to(parent_slot, obj)
-        file.write(offset + '    Offset: ' + vec_to_str_0(position_offset) + '\n')
+        file.write(offset + '    PositionOffset: ' + vec_to_str_0(position_offset) + '\n')
         self.write_module_properties(file, obj, offset)
         self.write_object_slots(file, obj, offset)
 
@@ -74,37 +74,41 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         file.write(offset + '  - Name: ' + obj.name + '\n')
         if obj.data is not None:
             file.write(offset + '    Mesh: ' + obj.data.name + '\n')
-        file.write(offset + '    PrettyName: ' + obj.common.prettyName + '\n')
+        file.write(offset + '    PrettyName: ' + obj.pmk.pretty_name + '\n')
+        file.write(offset + '    Type: ' + str(obj.pmk.property_type) + '\n')
+        file.write(offset + '    Enabled: ' + str(obj.pmk.enabled_to_use) + '\n')
         self.write_decals(file, obj, offset+'    ')
+        self.write_markers(file, obj, offset+'    ')
+        # self.write_markers(file, obj, offset+'    ')
+        self.write_physics_properties(file, obj.pmk, offset+'    ')
 
     def write_module_properties(self, file, obj, offset):
-        info = obj.common
-        file.write(offset + '    Type: ' + str(info.objectType) + '\n')
-        file.write(offset + '    Class: ' + str(info.moduleType) + '\n')
+        info = obj.pmk.module_properties
+        file.write(offset + '    Class: ' + str(info.module_class) + '\n')
+        file.write(offset + '    ClassData: ' + str(info.module_class) + '\n')
 
-        if info.moduleType == 'Hull':
+        if info.module_class == 'Hull':
             pass
-        elif info.moduleType == 'Turret':
-            file.write(offset + '    Velocity: ' + strf(info.rotateVelocity) + '\n')
-            file.write(offset + '    AmmoCapacity: ' + strf(info.rotateVelocity) + '\n')
-        elif info.moduleType == 'Mantlet':
-            file.write(offset + '    Min: ' + strf(info.minVertical) + '\n')
-            file.write(offset + '    Max: ' + strf(info.maxVertical) + '\n')
-        elif info.moduleType == 'Gun':
-            file.write(offset + '    Dispersion: ' + strf(info.dispersion) + '\n')
-            file.write(offset + '    Accuracy: ' + strf(info.accuracy) + '\n')
-            file.write(offset + '    Caliber: ' + str(info.caliber) + '\n')
-            end_of = obj.children[0]
-            file.write(offset + '    EndOf: ' + vec_to_str_0(vec_from_to(end_of, obj)) + '\n')
-        elif info.moduleType == 'Suspension':
+        elif info.module_class == 'Turret':
+            file.write(offset + '        Velocity: ' + strf(info.rotate_velocity) + '\n')
+            file.write(offset + '        AmmoCapacity: ' + strf(info.ammo_capacity) + '\n')
+        elif info.module_class == 'Mantlet':
+            file.write(offset + '        Min: ' + strf(info.min_vertical) + '\n')
+            file.write(offset + '        Max: ' + strf(info.max_vertical) + '\n')
+        elif info.module_class == 'Gun':
+            file.write(offset + '        Dispersion: ' + strf(info.dispersion) + '\n')
+            file.write(offset + '        Accuracy: ' + strf(info.accuracy) + '\n')
+            file.write(offset + '        Caliber: ' + str(info.caliber) + '\n')
+        elif info.module_class == 'Suspension':
             self.write_suspension_properties(file, obj, offset+'    ')
 
     def write_physics_properties(self, file, obj, offset):
-        pass
+        file.write(offset + 'Physical:\n')
+        file.write(offset + '    Mass: ' + strf(obj.collision_properties.mass) + '\n')
     def get_slots(self, obj):
         out = []
         for child in obj.children:
-            if child.common.objectType == 'Slot':
+            if child.pmk.property_type == 'Slot':
                 out.append(child)
         return out
     def write_object_slots(self, file, obj, offset):
@@ -119,7 +123,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         axis = obj_z_axis(slot)
         pivot = vec_from_to(obj, slot)
 
-        file.write(offset + '  - Name: ' + slot.name + '\n')
+        file.write(offset + '  - SlotName: ' + slot.name + '\n')
         file.write(offset + '    Axis: ' + vec_to_str_0(axis) + '\n')
         file.write(offset + '    Pivot: ' + vec_to_str_1(pivot) + '\n')
 
@@ -128,7 +132,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
 
         for pinned in slot.children:
             self.write_module(file, slot, pinned, offset + '    ')
-            return
+
 
     # first left side, from begining
     def sort_wheels(self, wheels):
@@ -136,7 +140,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
     def get_type(self, obj, type):
         out = []
         for child in obj.children:
-            if child.common.moduleType == type:
+            if child.pmk.module_properties.module_class == type:
                 out.append(child)
         return self.sort_wheels(out)
     def write_suspension_properties(self, file, obj, offset):
@@ -145,11 +149,11 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         drive_wheels = self.get_type(obj, 'DriveWheel')
         drive_wheels = self.get_type(obj, 'DriveWheel')
 
-        file.write(offset + 'ShoeMesh: ' + obj.common.shoe_mesh + '\n')
-        # file.write(offset + 'Stiffness: ' + obj.common.stiffness + '\n')
-        # file.write(offset + 'Damping: ' + obj.common.damping + '\n')
-        # file.write(offset + 'Compression: ' + obj.common.compression + '\n')
-        # file.write(offset + 'MaxTravel: ' + obj.common.max_travel + '\n')
+        file.write(offset + 'ShoeMesh: ' + obj.pmk.module_properties.shoe_mesh + '\n')
+        # file.write(offset + 'Stiffness: ' + obj.pmk.stiffness + '\n')
+        # file.write(offset + 'Damping: ' + obj.pmk.damping + '\n')
+        # file.write(offset + 'Compression: ' + obj.pmk.compression + '\n')
+        # file.write(offset + 'MaxTravel: ' + obj.pmk.max_travel + '\n')
         file.write(offset + 'MainWheels:\n')
         for it in main_wheels:
             file.write(offset + '  - Name: ' + it.name+ '\n')
@@ -171,18 +175,38 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
     def write_decals(self, file, obj, offset):
         decals = []
         for child in obj.children:
-            if child.common.objectType == 'Decal':
+            if child.pmk.property_type == 'Decal':
                 decals.append(child);
         if len(decals) > 0:
             file.write(offset + 'Decals:\n')
         for decal in decals:
-            file.write(offset + '  - Layer: ' + decal.common.decal_name + '\n')
+            file.write(offset + '  - Layer: ' + decal.pmk.decal_properties.decal_name + '\n')
             file.write(offset + '    Scale: ' + vec_to_str_0(decal.scale) + '\n')
             file.write(offset + '    Position: ' + vec_to_str_1(vec_from_to(decal, obj)) + '\n')
             # file.write(offset + '    Position: ' + vec_to_str_1(decal.matrix_local*zero_position) + '\n')
             locx = decal.matrix_local*right_vector
             locx.normalize()
             locz = decal.matrix_local*up_vector
+            locz.normalize()
+            file.write(offset + '    LocX: ' + vec_to_str_0(locx) + '\n')
+            file.write(offset + '    LocZ: ' + vec_to_str_0(locz) + '\n')
+    def write_markers(self, file, obj, offset):
+        markers = []
+        for child in obj.children:
+            if child.pmk.property_type == 'Marker':
+                markers.append(child);
+        if len(markers) > 0:
+            file.write(offset + 'Markers:\n')
+        for marker in markers:
+            file.write(offset + '  - Type: ' + marker.pmk.marker_properties.type + '\n')
+            if 'Camera' == marker.pmk.marker_properties.type:
+                file.write(offset + '    Mode: ' + marker.pmk.marker_properties.camera_mode + '\n')
+
+            file.write(offset + '    Position: ' + vec_to_str_1(vec_from_to(obj, marker)) + '\n')
+            # file.write(offset + '    Position: ' + vec_to_str_1(marker.matrix_local*zero_position) + '\n')
+            locx = marker.matrix_local*right_vector
+            locx.normalize()
+            locz = marker.matrix_local*up_vector
             locz.normalize()
             file.write(offset + '    LocX: ' + vec_to_str_0(locx) + '\n')
             file.write(offset + '    LocZ: ' + vec_to_str_0(locz) + '\n')

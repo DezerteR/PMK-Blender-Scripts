@@ -41,16 +41,18 @@ if __name__ == "__main__":
 
 class TechInfo(bpy.types.PropertyGroup):
     '''Module technology properties '''
-    price = FloatProperty(default = 10000)
-    requiredExp = FloatProperty(default = 10000)
+    price = IntProperty(default = 10000, name = 'Price')
+    required_exp = IntProperty(default = 10000, name = 'Exp')
 
 def change_module_type(self, context):
-    print(self.moduleType, context.object.name)
+    print(self.module_class, context.object.name)
 def dummmy_update(self, context):
+    pass
+def ammo_capacity_update(self, context):
     pass
 
 class ModuleProperties(bpy.types.PropertyGroup):
-    type = EnumProperty(items = (('Empty', 'Empty', 'The zeroth item'),
+    module_class = EnumProperty(items = (('Empty', 'Empty', 'The zeroth item'),
                                  ('Hull', 'Hull', 'The first item'),
                                  ('Turret', 'Turret', 'The second item'),
                                  ('Mantlet', 'Mantlet', 'The second item'),
@@ -65,8 +67,8 @@ class ModuleProperties(bpy.types.PropertyGroup):
                         default = 'Empty',
                         update = change_module_type)
     """ --------- Common --------- """
-    required_exp = FloatProperty(default = 10000)
-    hitpoints = FloatProperty(default = 100)
+    required_exp = FloatProperty(default = 10000, min = 0)
+    hitpoints = FloatProperty(default = 100, min = 0)
     tier = EnumProperty(items = (('0', 'I', ''),
                                  ('1', 'II', ''),
                                  ('2', 'III', ''),
@@ -82,17 +84,17 @@ class ModuleProperties(bpy.types.PropertyGroup):
     """ --------- Hull --------- """
 
     """ --------- Turret --------- """
-    rotate_velocity = FloatProperty(default = 1, name = 'Velocity')
+    rotate_velocity = FloatProperty(default = 1, name = 'Velocity', min = 0.0, max = 5.0)
     # na update przelicz ilość ammo danego kalibru
-    ammo_capacity = FloatProperty(default = 100, name = 'Ammo capacity')
+    ammo_capacity = IntProperty(default = 100, name = 'Ammo capacity', update=ammo_capacity_update, min = 0)
 
     """ --------- Mantlet --------- """
     min_vertical = FloatProperty(default = -0.2, name = 'Min')
     max_vertical = FloatProperty(default = 0.2, name = 'Max')
 
     """ --------- GUN --------- """
-    dispersion = FloatProperty(default = 0.1, name = 'Dispersion')
-    accuracy = FloatProperty(default = 0.03, name = 'Accuracy')
+    dispersion = FloatProperty(default = 0.1, name = 'Dispersion', min = 0.0, max = 1.0)
+    accuracy = FloatProperty(default = 0.03, name = 'Accuracy', min = 0.0, max = 1.0)
     caliber = EnumProperty(items = (('100', '100mm', ''),
                                     ('105', '105mm', ''),
                                     ('120', '120mm', ''),
@@ -105,13 +107,13 @@ class ModuleProperties(bpy.types.PropertyGroup):
                         default = '120')
 
     """ --------- Suspension --------- """
-    stiffness = FloatProperty(default = 60, name = 'Stiffness')
-    damping = FloatProperty(default = 0.3, name = 'Damping')
-    compression = FloatProperty(default = 0.5, name = 'Compression')
-    max_travel = FloatProperty(default = 0.5, name = 'maxTravel')
-    max_force = FloatProperty(default = 5000000, name = 'maxForce')
-    wheel_friction = FloatProperty(default = 100, name = 'WheelFriction')
-    roll_influence = FloatProperty(default = 0.1, name = 'RollInfluence')
+    stiffness = FloatProperty(default = 60, name = 'Stiffness', min = 0.0)
+    damping = FloatProperty(default = 0.3, name = 'Damping', min = 0.0)
+    compression = FloatProperty(default = 0.5, name = 'Compression', min = 0.0)
+    max_travel = FloatProperty(default = 0.5, name = 'maxTravel', min = 0.0)
+    max_force = FloatProperty(default = 5000000, name = 'maxForce', min = 0.0)
+    wheel_friction = FloatProperty(default = 100, name = 'WheelFriction', min = 0.0)
+    roll_influence = FloatProperty(default = 0.1, name = 'RollInfluence', min = 0.0)
     shoe_mesh = StringProperty(default = 'Shoe', name = 'ShoeMesh')
 
 class CollisonModelProperties(bpy.types.PropertyGroup):
@@ -131,6 +133,7 @@ class MarkerProperties(bpy.types.PropertyGroup):
                                  ('Light', 'Light', ''),
                                  ('SmokeSource', 'SmokeSource', ''),
                                  ('DustSource', 'DustSource', ''),
+                                 ('EndOfBarrel', 'End Of Barrel', ''),
                                  ),
                         name = "Type",
                         default = 'Camera')
@@ -141,7 +144,7 @@ class MarkerProperties(bpy.types.PropertyGroup):
                                        ('Pinned', 'Pinned', 'Camera rotates with module'),
                                  ),
                         name = "Type",
-                        default = 'Follow')
+                        default = 'Pinned')
     """ --------- Light --------- """
     """ --------- SmokeSource --------- """
     """ --------- DustSource --------- """
@@ -166,3 +169,4 @@ class CommonProperties(bpy.types.PropertyGroup):
     decal_properties = PointerProperty(type = DecalProperties)
     marker_properties = PointerProperty(type = MarkerProperties)
     tech_info = PointerProperty(type = TechInfo)
+    enabled_to_use = BoolProperty(name = 'Enabled', default = True)
