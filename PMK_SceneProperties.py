@@ -17,10 +17,12 @@ class SceneProperties(bpy.types.PropertyGroup):
     objectType = EnumProperty(items = (('Std', 'Std', 'Standard scene object'),
                                        ('Light', 'Light', 'Light, not used'),
                                        ('Glossy', 'Glossy', 'Glossy object'),
+                                       ('TerrainChunk', 'TerrainChunk', 'TerrainChunk'),
+                                       ('TerrainCollider', 'TerrainCollider', 'TerrainCollider'),
                                  ),
                         name = "ObjectType",
                         default = 'Std')
-    glossEnergy = FloatProperty(default = 1.0)
+    is_collider = BoolProperty(name="is_collider", default = False)
 
 def register():
     print('\nregistering ', 'BaseStructs')

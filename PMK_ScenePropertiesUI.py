@@ -33,6 +33,7 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
         obj = context.object
 
         layout.row().prop(obj.scene, "objectType", expand=True)
+        layout.row().prop(obj.scene, "is_collider", expand=True)
         if obj.scene.objectType == 'Glossy':
             layout.row().prop(obj.scene, "glossEnergy", text='Energy')
 

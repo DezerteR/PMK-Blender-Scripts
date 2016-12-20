@@ -80,7 +80,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         self.write_decals(file, obj, offset+'    ')
         self.write_markers(file, obj, offset+'    ')
         # self.write_markers(file, obj, offset+'    ')
-        self.write_physics_properties(file, obj.pmk, offset+'    ')
+        self.write_physics_properties(file, obj, offset+'    ')
 
     def write_module_properties(self, file, obj, offset):
         info = obj.pmk.module_properties
@@ -102,9 +102,16 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         elif info.module_class == 'Suspension':
             self.write_suspension_properties(file, obj, offset+'    ')
 
+    def find_collision(self, obj):
+        for c in obj.children:
+            if c.pmk.property_type == 'Collision':
+                return c.name
+        return "none"
+
     def write_physics_properties(self, file, obj, offset):
         file.write(offset + 'Physical:\n')
-        file.write(offset + '    Mass: ' + strf(obj.collision_properties.mass) + '\n')
+        file.write(offset + '    Mass: ' + strf(obj.pmk.collision_properties.mass) + '\n')
+        file.write(offset + '    Collision: ' + self.find_collision(obj) + '\n')
     def get_slots(self, obj):
         out = []
         for child in obj.children:
