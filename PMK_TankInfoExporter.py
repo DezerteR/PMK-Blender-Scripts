@@ -151,18 +151,19 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
                 out.append(child)
         return self.sort_wheels(out)
     def write_suspension_properties(self, file, obj, offset):
-        main_wheels = self.get_type(obj, 'MainWheel')
+        road_wheels = self.get_type(obj, 'RoadWheel')
         support_wheels = self.get_type(obj, 'SupportWheel')
-        drive_wheels = self.get_type(obj, 'DriveWheel')
-        drive_wheels = self.get_type(obj, 'DriveWheel')
+        drive_sprocket = self.get_type(obj, 'DriveSprocket')
+        idler_wheel = self.get_type(obj, 'IdlerWheel')
 
         file.write(offset + 'ShoeMesh: ' + obj.pmk.module_properties.shoe_mesh + '\n')
+        file.write(offset + 'Origin: ' + vec_to_str_1(obj.location)+ '\n')
         # file.write(offset + 'Stiffness: ' + obj.pmk.stiffness + '\n')
         # file.write(offset + 'Damping: ' + obj.pmk.damping + '\n')
         # file.write(offset + 'Compression: ' + obj.pmk.compression + '\n')
         # file.write(offset + 'MaxTravel: ' + obj.pmk.max_travel + '\n')
-        file.write(offset + 'MainWheels:\n')
-        for it in main_wheels:
+        file.write(offset + 'RoadWheels:\n')
+        for it in road_wheels:
             file.write(offset + '  - Name: ' + it.name+ '\n')
             file.write(offset + '    Axis: ' + vec_to_str_0(it.matrix_world*right_vector)+ '\n')
             file.write(offset + '    Dimension: ' + vec_to_str_0(it.dimensions)+ '\n')
@@ -173,8 +174,14 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
             file.write(offset + '    Axis: ' + vec_to_str_0(it.matrix_world*right_vector)+ '\n')
             file.write(offset + '    Dimension: ' + vec_to_str_0(it.dimensions)+ '\n')
             file.write(offset + '    Position: ' + vec_to_str_1(it.location)+ '\n')
-        file.write(offset + 'DriveWheels:\n')
-        for it in drive_wheels:
+        file.write(offset + 'DriveSprocket:\n')
+        for it in drive_sprocket:
+            file.write(offset + '  - Name: ' + it.name+ '\n')
+            file.write(offset + '    Axis: ' + vec_to_str_0(it.matrix_world*right_vector)+ '\n')
+            file.write(offset + '    Dimension: ' + vec_to_str_0(it.dimensions)+ '\n')
+            file.write(offset + '    Position: ' + vec_to_str_1(it.location)+ '\n')
+        file.write(offset + 'IdlerWheel:\n')
+        for it in idler_wheel:
             file.write(offset + '  - Name: ' + it.name+ '\n')
             file.write(offset + '    Axis: ' + vec_to_str_0(it.matrix_world*right_vector)+ '\n')
             file.write(offset + '    Dimension: ' + vec_to_str_0(it.dimensions)+ '\n')
