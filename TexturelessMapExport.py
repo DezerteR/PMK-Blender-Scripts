@@ -31,18 +31,26 @@ def getVectTo(a, b):
     Pb = b.matrix_world*mathutils.Vector((0.0, 0.0, 0.0, 1.0))
     return Pb - Pa
 
+def writeQuaternion(file, object, offset):
+	# quat = object.rotation_euler.to_quaternion()
+	object.rotation_mode = 'QUATERNION'
+	quat = object.rotation_quaternion
+	str = '['+tstr(quat[0])+', '+tstr(quat[1])+', '+tstr(quat[2])+', '+tstr(quat[3])+']'
+	file.write(offset + 'Quaternion: ' + str)
+	return quat
+
 #---------------------
 
 def scene_bounds():
-    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+    meshes = [o for o in bpy.data.objects if o.scene.objectType == 'TerrainChunk']
 
-    minV = Vector((min([min([co[0] for co in m.bound_box]) for m in meshes]),
-                   min([min([co[1] for co in m.bound_box]) for m in meshes]),
-                   min([min([co[2] for co in m.bound_box]) for m in meshes])))
+    minV = Vector((min([min([co[0] for co in m.bound_box]) + m.location[0] for m in meshes]),
+                   min([min([co[1] for co in m.bound_box]) + m.location[1] for m in meshes]),
+                   min([min([co[2] for co in m.bound_box]) + m.location[2] for m in meshes])))
 
-    maxV = Vector((max([max([co[0] for co in m.bound_box]) for m in meshes]),
-                   max([max([co[1] for co in m.bound_box]) for m in meshes]),
-                   max([max([co[2] for co in m.bound_box]) for m in meshes])))
+    maxV = Vector((max([max([co[0] for co in m.bound_box]) + m.location[0] for m in meshes]),
+                   max([max([co[1] for co in m.bound_box]) + m.location[1] for m in meshes]),
+                   max([max([co[2] for co in m.bound_box]) + m.location[2] for m in meshes])))
 
     return minV, maxV
 
@@ -50,24 +58,43 @@ def saveMapDescription(file):
     minV, maxV = scene_bounds()
 
 
-    file.write("\nMax: " + vecToString(maxV))
-    file.write("\nMin: " + vecToString(minV))
-    file.write("\nChunks:")
+    file.write("\n    Max: " + vecToString(maxV))
+    file.write("\n    Min: " + vecToString(minV))
+    file.write("\n    Chunks:")
     for chunk in bpy.data.objects:
         if not chunk.scene.objectType == "TerrainChunk":
             continue
 
-        file.write("\n  - Name: " + chunk.name)
-        file.write("\n    Position: " + vecToString(chunk.location))
-        file.write("\n    Dimension: " + vecToString(chunk.dimensions))
-        file.write("\n    isCollider: " + str(chunk.scene.is_collider))
+        file.write("\n      - Name: " + chunk.name)
+        file.write("\n        Mesh: " + chunk.data.name)
+        file.write("\n        Position: " + vecToString(chunk.location))
+        file.write("\n        Dimension: " + vecToString(chunk.dimensions))
+        file.write("\n        isCollider: " + str(chunk.scene.is_collider))
 
 def saveMapCollider(file):
-    file.write("Collider:")
+    file.write("\n    Collider:")
     for obj in bpy.data.objects:
         if obj.scene.objectType == "TerrainCollider":
-            file.write(" " + obj.name)
+            file.write(" " + obj.data.name)
             return
+
+def saveObjects(file, s):
+    for obj in bpy.data.objects:
+        if obj.scene.objectType == "Model":
+            saveObject(obj, file, s)
+
+def saveObject(obj, file, s):
+    file.write(s + "- Name: " + obj.name)
+    file.write(s + "  Mesh: " + obj.data.name)
+    file.write(s + "  Position: " + vecToString(obj.location))
+    writeQuaternion(file, obj, s+"  ")
+    file.write(s + "  Dimension: " + vecToString(obj.dimensions))
+    file.write(s + "  isCollider: " + str(obj.scene.is_collider))
+    if obj.scene.is_collider:
+        file.write(s + "  Colliders: ")
+        for child in obj.children:
+            file.write(s + "    - Mesh: " + child.data.name)
+
 
 #---------------------
 class ExportMyFormat(bpy.types.Operator, ExportHelper):
@@ -82,8 +109,11 @@ class ExportMyFormat(bpy.types.Operator, ExportHelper):
         filepath = os.path.dirname(self.filepath)
 
         file = open(filepath+"\map.yml", "w", encoding='utf8')
+        file.write("Terrain:")
         saveMapCollider(file)
         saveMapDescription(file)
+        file.write("\nObjects:")
+        saveObjects(file, "\n    ")
         file.close()
 
         # save whole file to collada

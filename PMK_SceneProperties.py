@@ -14,14 +14,15 @@ bl_info = {
 
 class SceneProperties(bpy.types.PropertyGroup):
     '''Common module properties '''
-    objectType = EnumProperty(items = (('Std', 'Std', 'Standard scene object'),
+    objectType = EnumProperty(items = (('Model', 'Model', 'Standard scene object'),
+                                       ('Collider', 'Collider', 'Physic representation'),
                                        ('Light', 'Light', 'Light, not used'),
                                        ('Glossy', 'Glossy', 'Glossy object'),
                                        ('TerrainChunk', 'TerrainChunk', 'TerrainChunk'),
                                        ('TerrainCollider', 'TerrainCollider', 'TerrainCollider'),
                                  ),
                         name = "ObjectType",
-                        default = 'Std')
+                        default = 'Model')
     is_collider = BoolProperty(name="is_collider", default = False)
 
 def register():
