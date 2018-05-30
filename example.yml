@@ -1,0 +1,17 @@
+B: 20
+C: [12, 13]
+A: 10
+Tank: 
+    Turret: 
+        Power: 100
+        Position: <1.0, 2.0, 3.0, 4.0>
+    Dupa: 
+        DupaDup: asd
+        table: [56, 86, 56]
+Vec: <1.0, 2.0, 3.0, 4.0>
+D: 
+  - E: 16
+    U: sdf
+  - F: 20
+Enable: yes
+MultiModel: ['partA', 'partB']

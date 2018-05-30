@@ -1,7 +1,7 @@
 ﻿
 bl_info = {
 		"name":         "PMK Scene Map exporter",
-		"author":       "DezerteR",
+		"author":       "Karol Wajs",
 		"blender":      (2,7,5),
 		"version":      (0,0,1),
 		"location":     "File > Export > PMK Scene Map exporter",

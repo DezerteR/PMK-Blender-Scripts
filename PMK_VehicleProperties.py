@@ -4,7 +4,7 @@ from bpy.props import *
 
 bl_info = {
     "name": "PMK tank properties",
-    "author": "DezerteR",
+    "author": "Karol Wajs",
     "version": (0, 0, 1),
     "blender": (2, 7, 6),
     "location": "Viewport",

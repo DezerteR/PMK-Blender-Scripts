@@ -1,11 +1,11 @@
 ﻿
 bl_info = {
     "name":         "PMK vehicle info",
-    "author":       "DezerteR",
+    "author":       "Karol Wajs",
     "blender":      (2,7,7),
     "version":      (0,1,0),
-    "location":     "config > Export > Tank config",
-    "description":  "Export vehicle info",
+    "location":     "config > Export > Vehicle Config File",
+    "description":  "Export vehicle module configuration",
     "category":     "Import-Export"
 }
 
@@ -21,12 +21,12 @@ def obj_z_axis(obj):
     axis = obj.matrix_local*mathutils.Vector((0.0, 0.0, 1.0, 0.0))
     axis.normalize()
     return axis
-def strf(number):
-    return str("%.5f" %number)
-def vec_to_str_0(vec):
-    return '['+strf(vec.x)+', '+strf(vec.y)+', '+strf(vec.z)+', 0.0]'
-def vec_to_str_1(vec):
-    return '['+strf(vec.x)+', '+strf(vec.y)+', '+strf(vec.z)+', 1.0]'
+# def strf(number):
+#     return str("%.5f" %number)
+# def vec_to_str_0(vec):
+#     return '['+strf(vec.x)+', '+strf(vec.y)+', '+strf(vec.z)+', 0.0]'
+# def vec_to_str_1(vec):
+#     return '['+strf(vec.x)+', '+strf(vec.y)+', '+strf(vec.z)+', 1.0]'
 
 right_vector = mathutils.Vector((1.0, 0.0, 0.0, 0.0))
 up_vector = mathutils.Vector((0.0, 0.0, 1.0, 0.0))
@@ -35,7 +35,7 @@ zero_position = mathutils.Vector((0.0, 0.0, 0.0, 1.0))
 
 class TankInfoExporter(bpy.types.Operator, ExportHelper):
     bl_idname       = "vehicle_info.yaml"
-    bl_label        = "Vehicle info exporter"
+    bl_label        = "Vehicle config exporter"
     bl_options      = {'PRESET'}
     filename_ext    = ".yml"
 
@@ -251,8 +251,10 @@ def menu_func(self, context):
 def register():
     bpy.utils.register_class(TankInfoExporter)
     bpy.types.INFO_MT_file_export.append(menu_func)
+
 def unregister():
     bpy.utils.unregister_class(TankInfoExporter)
     bpy.types.INFO_MT_file_export.remove(menu_func)
+
 if __name__ == "__main__":
     register()

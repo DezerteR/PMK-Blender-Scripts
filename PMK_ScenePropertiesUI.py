@@ -4,7 +4,7 @@ import PMK_SceneProperties
 
 bl_info = {
     "name": "PMK Scene Panel",
-    "author": "DezerteR",
+    "author": "Karol Wajs",
     "version": (0, 0, 1),
     "blender": (2, 7, 6),
     "location": "Viewport",
