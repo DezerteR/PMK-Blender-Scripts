@@ -215,16 +215,16 @@ class ExportMyFormat(bpy.types.Operator, ExportHelper):
 
 		generateYAMLDescrFile(file, bpy.data.objects)
 
-		# path = os.path.dirname(self.filepath)
-		# name = os.path.splitext(os.path.split(self.filepath)[1])[0]
-		# if not os.path.exists(path+'\\'+name):
-			# os.makedirs(path+'\\'+name)
-		# offset = '\n'
-		# file.write('dirname: '+ '\\' + name+ '\\' )
-		# file.write('\nRobotPosition: '+vecToString(bpy.data.objects['Robot-Base'].location))
-		# file.write('\nRobot:')
-		# writeRobot(file, bpy.data.objects['Robot-Base'].children[0])
-		# writeScene(file, bpy.data.objects, offset, path, name)
+		path = os.path.dirname(self.filepath)
+		name = os.path.splitext(os.path.split(self.filepath)[1])[0]
+		if not os.path.exists(path+'\\'+name):
+			os.makedirs(path+'\\'+name)
+		offset = '\n'
+		file.write('dirname: '+ '\\' + name+ '\\' )
+		file.write('\nRobotPosition: '+vecToString(bpy.data.objects['Robot-Base'].location))
+		file.write('\nRobot:')
+		writeRobot(file, bpy.data.objects['Robot-Base'].children[0])
+		writeScene(file, bpy.data.objects, offset, path, name)
 		writeLamps(file, bpy.data.objects, '\n')
 
 		file.close()

@@ -2,55 +2,65 @@ import io
 import mathutils
 primitive = (int, str, bool, float)
 
-def write_yaml_to(stream, thing):
-    write_collection_to(stream, thing, "")
+def writeYamlTo(stream, thing):
+    writeCollectionTo(stream, thing, "")
 
-def write_collection_to(stream, thing, indent, omit_indentation=False):
+def writeCollectionTo(stream, thing, indent, omitIndentation=False):
         if isinstance(thing, dict):
             for key, value  in thing.items():
-                write_dict(stream, key, value, "" if omit_indentation else indent)
-                omit_indentation = False
+                writeDict(stream, key, value, "" if omitIndentation else indent)
+                omitIndentation = False
 
         elif isinstance(thing, list):
             for value in thing:
-                write_list_element(stream, value, indent)
+                writeListElement(stream, value, indent)
 
-def write_dict(stream, key, value, indent):
+def writeDict(stream, key, value, indent):
     stringed = stringify(value)
     stream.write(indent + key + ": " + stringed + "\n")
     if stringed=="":
-        write_collection_to(stream, value, indent + "    ")
+        writeCollectionTo(stream, value, indent + "    ")
 
-def write_list_element(stream, value, indent):
+def writeListElement(stream, value, indent):
     stringed = stringify(value)
     stream.write(indent[0:-2] + "- ")
-    is_dictionary = stringed == ""
+    isDictionary = stringed == ""
 
-    if is_dictionary:
-        write_collection_to(stream, value, indent, True)
+    if isDictionary:
+        writeCollectionTo(stream, value, indent, True)
     else:
         stream.write(stringed + "\n")
-        write_collection_to(stream, value, indent + "    ")
-def is_primitive(thing):
+        writeCollectionTo(stream, value, indent + "    ")
+
+def isPrimitive(thing):
     return isinstance(thing, primitive)
 
-def is_list_of_simple_types(thing):
+def isListOfSympleTypes(thing):
     if not isinstance(thing, list):
         return False
     for i in thing:
-        if not is_primitive(i):
+        if not isPrimitive(i):
             return False
     return True
 
+def strf(number):
+    # return str("%.5f" %number)
+    return str(round(number, 6))
+
+def roundIfFloat(number):
+    return round(number, 6) if isinstance(number, float) else number
+
 def stringify(thing):
-    if is_list_of_simple_types(thing):
-        return str(thing)
+    if isListOfSympleTypes(thing):
+        return str([roundIfFloat(x) for x in thing])
     elif isinstance(thing, list) or isinstance(thing, dict):
         return ""
     elif isinstance(thing, mathutils.Vector):
-        return "<"+str(thing.x)+", "+str(thing.y)+", "+str(thing.z)+", "+str(thing.w)+">"
+        return "<"+strf(thing.x)+", "+strf(thing.y)+", "+strf(thing.z)+">"
     elif isinstance(thing, bool):
         return "yes" if thing else "no"
+    elif isinstance(thing, float):
+        return strf(thing)
     else:
         return str(thing)
 
@@ -80,9 +90,9 @@ if __name__ == '__main__':
         }
     }
     stream = io.StringIO()
-    write_yaml_to(stream, object)
+    writeYamlTo(stream, object)
     print(stream.getvalue())
 
 
     with open("example.yml", 'w') as fp:
-        write_yaml_to(fp, object)
+        writeYamlTo(fp, object)
