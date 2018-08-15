@@ -23,7 +23,7 @@ def objUpAxis(thing):
     return axis
 
 vecRight = mathutils.Vector((1.0, 0.0, 0.0, 0.0))
-becUp = mathutils.Vector((0.0, 0.0, 1.0, 0.0))
+vecUp = mathutils.Vector((0.0, 0.0, 1.0, 0.0))
 vecForward = mathutils.Vector((0.0, 1.0, 0.0, 0.0))
 zeroPosition = mathutils.Vector((0.0, 0.0, 0.0, 1.0))
 
@@ -73,9 +73,10 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         self.appendDecals(module, thing)
         self.appendMarkers(module, thing)
         self.appendPhysical(module, thing)
-        print(parentSlot)
         if parentSlot:
             self.appendConstraints(module, parentSlot, thing)
+        else:
+            module["FromParentToOrigin"] = mathutils.Vector((0,0,0))
         self.appendConnectors(module, thing)
 
         return module
@@ -105,7 +106,8 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
 
         config["Physical"] = {}
         config["Physical"]["Mass"] = thing.rigid_body.mass
-        config["Physical"]["CollisionModels"] = self.findPhysicalModels(thing)
+        models = self.findPhysicalModels(thing)
+        if len(models) > 0 :config["Physical"]["CollisionModels"] = models
         # TODO: add bounding box
 
     def findPhysicalModels(self, thing):
@@ -122,6 +124,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
             if child.pmk.propertyType == 'Connector':
                 out.append(child)
         return out
+        
     def appendConnectors(self, config, parentThing):
         slots = self.getConnectors(parentThing)
         if len(slots) > 0:
@@ -130,6 +133,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
                 config["Connector"].append(self.getConnectorProperties(slot, parentThing))
 
     # * I didn't found usage for linear constraints
+    # * lack of limits means that connection is rigid
     def appendConstraints(self, config, parentSlot, thing):
         config["FromParentToOrigin"] = vecFromTo(parentSlot, thing)
 
@@ -138,7 +142,9 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
 
         c = thing.constraints["Limit Rotation"]
 
-        config["hasLimits"] = [c.use_limit_x, c.use_limit_y, c.use_limit_z]
+        config["Limits"] = [1 if c.use_limit_x else 0,
+                            1 if c.use_limit_y else 0,
+                            1 if c.use_limit_z else 0, ]
         config["Min"] = [c.min_x, c.min_y, c.min_z]
         config["Max"] = [c.max_x, c.max_y, c.max_z]
 
@@ -147,8 +153,12 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
     def getConnectorProperties(self, slot, parentThing):
         out = OrderedDict()
         out["Name"] = slot.name
-        out["Axis"] = objUpAxis(slot) # * useful only for visuals?
-        out["FromParentOrigin"] = vecFromTo(parentThing, slot)
+        m = slot.matrix_local
+        # * need to get axes of local coordinates
+        out["X"] = mathutils.Vector(( m[0][0], m[1][0], m[2][0] ))
+        out["Y"] = mathutils.Vector(( m[0][1], m[1][1], m[2][1] ))
+        out["Z"] = mathutils.Vector(( m[0][2], m[1][2], m[2][2] ))
+        out["W"] = mathutils.Vector(( m[0][3], m[1][3], m[2][3] ))
 
         if len(slot.children) > 0:
             constraintAxis = mathutils.Vector()
@@ -232,7 +242,7 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
         for decal in decals:
             locx = decal.matrix_local*vecRight
             locx.normalize()
-            locz = decal.matrix_local*becUp
+            locz = decal.matrix_local*vecUp
             locz.normalize()
             config["Decals"].append({
                 "Layer"     : decal.pmk.decalProps.decalName,
@@ -252,20 +262,21 @@ class TankInfoExporter(bpy.types.Operator, ExportHelper):
 
         config["Markers"] = []
         for marker in markers:
-            locx = marker.matrix_local*vecRight
-            locx.normalize()
-            locz = marker.matrix_local*becUp
-            locz.normalize()
-            config["Markers"].append({
-                "Type" : marker.pmk.markerProps.type,
-                "Position" : vecFromTo(thing, marker),
-                "LocX" : locx,
-                "LocZ" : locz
-            })
+            m = OrderedDict()
+            loc = marker.matrix_local
+            m["Type"] = marker.pmk.markerProps.type
+            m["X"] = mathutils.Vector(( loc[0][0], loc[1][0], loc[2][0] ))
+            m["Y"] = mathutils.Vector(( loc[0][1], loc[1][1], loc[2][1] ))
+            m["W"] = mathutils.Vector(( loc[0][3], loc[1][3], loc[2][3] ))
 
             if 'Camera' == marker.pmk.markerProps.type:
-                config["Markers"][-1]["Mode"] = marker.pmk.markerProps.cameraMode
-
+                m["Mode"] = marker.pmk.markerProps.cameraMode
+                m["FOV"] = marker.pmk.markerProps.cameraFOV
+                m["Offset"] = mathutils.Vector((marker.pmk.markerProps.cameraOffset[0], marker.pmk.markerProps.cameraOffset[1], marker.pmk.markerProps.cameraOffset[2]))
+                m["Inertia"] = marker.pmk.markerProps.cameraInertia
+            
+            config["Markers"].append(m)
+            
 def menu_func(self, context):
     self.layout.operator(TankInfoExporter.bl_idname, text="PMK Vehicle Config(.yml)")
 

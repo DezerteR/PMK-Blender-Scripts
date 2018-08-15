@@ -101,11 +101,15 @@ class MarkerProperties(bpy.types.PropertyGroup):
 
     """ --------- Camera --------- """
     cameraMode = EnumProperty(items = (('Free', 'Free', 'Free cam', 1),
-                                       ('Follow', 'Follow', 'Only position is pinned', 2),
-                                       ('Pinned', 'Pinned', 'Camera rotates with module', 3),
+                                       ('CopyPosition', 'CopyPosition', '', 2),
+                                       ('CopyPlane', 'CopyPlane', '', 3),
+                                       ('CopyTransform', 'CopyTransform', '', 4),
                                  ),
-                        name = "Type",
-                        default = 'Pinned')
+                        name = "Mode",
+                        default = 'CopyPosition')
+    cameraFOV = FloatProperty(default = 90, name = 'FOV', min = 70, max = 115)
+    cameraOffset = FloatVectorProperty(default = (0,0,0), name = 'Offset', min = -5, max = 23)
+    cameraInertia  = FloatProperty(default = 1, name = 'Inertia', min = 0, max = 50)
     """ --------- Light --------- """
     """ --------- SmokeSource --------- """
     """ --------- DustSource --------- """

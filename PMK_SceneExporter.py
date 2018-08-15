@@ -1,12 +1,12 @@
 ﻿
 bl_info = {
-		"name":         "PMK Scene exporter",
-		"author":       "Karol Wajs",
-		"blender":      (2,7,5),
-		"version":      (0,0,1),
-		"location":     "File > Export > PMK Scene exporter",
-		"description":  "Export scene for Po-Male-Ka",
-		"category":     "Import-Export"
+        "name":         "PMK Scene exporter",
+        "author":       "Karol Wajs",
+        "blender":      (2,7,9),
+        "version":      (0,0,1),
+        "location":     "File > Export > PMK Scene exporter",
+        "description":  "Export scene for Po-Male-Ka",
+        "category":     "Import-Export"
 }
 
 import bpy
@@ -14,229 +14,150 @@ import mathutils
 import string
 import os
 from bpy_extras.io_utils import ExportHelper
+from collections import OrderedDict
+import SimpleYaml
 
-def tstr(number):
-	# return str(round(number, 6))
-	return str("%.4f" %number)
+class ExportScene(bpy.types.Operator, ExportHelper):
+    bl_idname       = "pmkscene.yml";
+    bl_label        = "PMK Scene exporter";
+    bl_options      = {'PRESET'};
 
-def vecToString(vec):
-	str = '['+tstr(vec.x)+', '+tstr(vec.y)+', '+tstr(vec.z)+']'
-	return str
+    filename_ext    = ".yml";
 
-def getVectTo(a, b):
-	Pa = a.matrix_world*mathutils.Vector((0.0, 0.0, 0.0, 1.0))
-	Pb = b.matrix_world*mathutils.Vector((0.0, 0.0, 0.0, 1.0))
-	return Pb - Pa
+    def execute(self, context):
+        config = OrderedDict()
+        config['Materials'] = self.getMaterials(bpy.data.materials)
+        config["Objects"] = self.getObjects(bpy.data.objects)
+        ls = self.getLights(bpy.data.objects)
+        if len(ls) > 0:
+            config["LightSources"] = ls
 
-class YamlPrinter:
-	def __init__(self, file):
-		self.file = file
-		self.offset = ''
+        with open(self.filepath, 'w') as fp:
+            SimpleYaml.writeYamlTo(fp, config)
 
-	def line(self, value):
-		file.write('\n' + offset + value)
+        path = os.path.dirname(self.filepath)
+        name = os.path.splitext(os.path.split(self.filepath)[1])[0]
 
-	def indent(self):
-		offset = offset + '  '
-	def unindent(self):
-		offset = offset[:-2]
+        bpy.ops.wm.collada_export(
+            filepath = os.path.join(path, name+".dae"),
+            check_existing = False,
+            apply_modifiers = True,
+            triangulate = True,
+            use_object_instantiation = False
+        )
+        return {'FINISHED'};
 
-
-def writePosition(file, object, offset):
-	position = object.matrix_world*mathutils.Vector((0.0, 0.0, 0.0, 1.0))
-	file.write(offset + '  Position: ' + vecToString(position))
-	return position
-def writeQuaternion(file, object, offset):
-	# quat = object.rotation_euler.to_quaternion()
-	object.rotation_mode = 'QUATERNION'
-	quat = object.rotation_quaternion
-	str = '['+tstr(quat[0])+', '+tstr(quat[1])+', '+tstr(quat[2])+', '+tstr(quat[3])+']'
-	file.write(offset + '  Quaternion: ' + str)
-	return quat
-def writeMaterial(file, object, o):
-	file.write(o + '  Material:')
-
-	tex = object.data.uv_textures.active.data[0].image
-
-	if tex:
-		file.write(o + '    Texture: ' + tex.name)
-	else:
-		file.write(o + '    Texture: --empty--')
-
-	if object.scene.objectType == 'Glossy':
-		file.write(o + '    Glossy: ' + str(object.scene.glossEnergy))
-
-	mat = object.active_material
-	if mat:
-		color = mat.diffuse_color
-		specta = tstr(mat.specular_intensity)
-		colorStr = '['+tstr(color[0])+', '+tstr(color[1])+', '+tstr(color[2])+']'
-		file.write(o + '    Color: ' + colorStr)
-		file.write(o + '    Spectacular: ' + specta)
-	else:
-		file.write(o + '    Color: [0.1473, 0.1473, 0.1473]')
-		file.write(o + '    Spectacular: 1.0')
-
-def writeRigidBodyProperties(file, object, offset):
-	rgBody = object.rigid_body
-	if(rgBody):
-		o = offset + '    '
-		file.write(offset + '  RigidBody: ')
+    def getMaterials(self, materials):
+        out = {}
+        for mat in materials:
+            out[mat.name] = {
+                "roughness": mat.pmk.roughness,
+                "metallic": mat.pmk.metallic,
+                "reflectance": mat.pmk.reflectance,
+                "clearCoat": mat.pmk.clearCoat,
+                "clearCoatRoughness": mat.pmk.clearCoatRoughness,
+                "anisotropy": mat.pmk.anisotropy,
+                "emissive": mat.pmk.emissive,
+            }
+        return out
 
 
-		file.write(o + 'enabled: ' + "yes")
-		file.write(o + 'type: ' + rgBody.type)
-		file.write(o + 'collision_shape: ' + rgBody.collision_shape)
-		file.write(o + 'mass: ' + tstr(rgBody.mass))
-		file.write(o + 'friction: ' + tstr(rgBody.friction))
+    def getObjects(self, objectList):
+        out = []
+        for obj in objectList:
+            self.appendObject(obj, out)
 
-		points = []
-		for b in object.bound_box:
-			for x in b:
-				points.append(tstr(x))
+        return out
 
-		arr = " ".join(points)
-		file.write(o + 'BBox: ' + arr)
+    def appendObject(self, thing, objectList):
+        if thing.type != 'MESH' or thing.pmk.propertyType == 'Physical':
+            return
 
-def writeLampColor(file, object, offset):
-	color = object.color
-	str = '['+tstr(color[0])+', '+tstr(color[1])+', '+tstr(color[2])+']'
-	file.write(offset + '  Color: ' + str)
+        data = OrderedDict()
+        data['Name'] = thing.name
 
-def writeScene(file, objects, offset, dirname, sceneName):
-	file.write(offset + 'Meshes:')
-	offset = offset + ' '
-	for obj in objects:
-		if obj.type == 'MESH':
-			file.write(offset + '- Name: ' + obj.name)
+        m = thing.matrix_world
+        data['Position'] = OrderedDict()
+        data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
+        data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
+        data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
+        data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+        # data['Texture'] = self.getTexture(thing)
+        if thing.data is not None:
+            data["Models"] = self.getMeshes(thing)
+        data['isPhysical'] = thing.rigid_body is not None
+        if thing.rigid_body is not None:
+            data['Mass'] = thing.rigid_body.mass
+            data['Colliders'] = self.findPhysicalModels(thing)
 
-			# remember and write position
-			currentLoc = writePosition(file, obj, offset)
-			currentQuat = writeQuaternion(file, obj, offset)
-			writeMaterial(file, obj, offset)
-			writeRigidBodyProperties(file, obj, offset)
-			# select object
-			bpy.ops.object.select_pattern(pattern = obj.name, extend = False)
-			# bpy.ops.transform.select_orientation(orientation='GLOBAL')
-			# move to 000
-			bpy.ops.transform.translate(value = -currentLoc.xyz)
-			aa = currentQuat.to_axis_angle()
-			bpy.ops.transform.rotate(value = -aa[1], axis = aa[0])
+        objectList.append(data)
 
-			bpy.ops.export_scene.obj(check_existing=False, filepath=dirname+'\\'+sceneName+'\\'+obj.name+'.obj', axis_forward='Y', axis_up='Z', filter_glob="*.obj;*.mtl", use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False, use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False, use_triangles=True, use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False, group_by_material=False, keep_vertex_order=False, global_scale=1.0, path_mode='AUTO')
+    def getMeshes(self, thing):
+        # // out = [thing.data.name] 'cos using object names, not mesh names
+        out = [thing.name]
+        for child in thing.children:
+            if child.pmk.propertyType == 'Part' and child.data is not None:
+                # // out.append(child.data.name) 'cos using object names, not mesh names
+                out.append(child.name)
+        return out
 
-			bpy.ops.transform.rotate(value = aa[1], axis = aa[0])
-			bpy.ops.transform.translate(value = currentLoc.xyz)
+    def findPhysicalModels(self, thing):
+        out = []
+        for c in thing.children:
+            if c.pmk.propertyType == 'Collision':
+                # // out.append(c.data.name) 'cos using object names, not mesh names
+                out.append(c.name)
+        return "none"
 
-			# bpy.ops.uv.unwrap()
+    def getTexture(self, thing):
+        # TODO: later should be converted to texture with material ID and decals, but for now one from PBR material pool will be enough
+        # tex = object.data.uv_textures.active.data[0].image
+        # if tex:
+            # return tex.name
+        # else:
+            return "none"
 
-def writeLamps(file, objects, offset):
-	file.write(offset + 'Lamps:')
-	offset = offset + ' '
-	for object in objects:
-		if object.type == 'LAMP':
-			print(object.name)
-			file.write(offset + '- Name: ' + object.name)
-			# object = bpy.data.objects[lamp.name]
+    def getLights(self, objects):
+        out = []
+        for thing in objects:
+            if thing.type == 'LAMP':
+                data = OrderedDict()
 
-			lamp = bpy.data.lamps[object.data.name]
-			writePosition(file, object, offset)
-			writeQuaternion(file, object, offset)
-			writeLampColor(file, lamp, offset)
+                data['Name'] = thing.name
+                # object = bpy.data.objects[lamp.name]
+                lamp = bpy.data.lamps[thing.data.name]
 
-			file.write(offset + '  Falloff_distance: ' + tstr(lamp.distance))
-			file.write(offset + '  Energy: ' + tstr(lamp.energy))
-			file.write(offset + '  Type: ' + lamp.type)
+                m = thing.matrix_world
+                data['Position'] = OrderedDict()
+                data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
+                data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
+                data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
+                data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+                data['Color'] = mathutils.Vector(( thing.color[0], thing.color[1], thing.color[2] ))
 
-			if lamp.type == 'POINT':
-				file.write(offset + '  falloff_type: ' + lamp.falloff_type)
+                data['Falloff_distance'] = lamp.distance
+                data['Energy'] = lamp.energy
+                data['Type'] = lamp.type
 
-			if lamp.type == 'SPOT':
-				# file.write(offset + '  falloff_type: ' + lamp.falloff_type)
-				file.write(offset + '  spot_size: ' + tstr(lamp.spot_size))
+                if lamp.type == 'POINT':
+                    data['falloff_type'] = lamp.falloff_type
 
-			if lamp.type == 'AREA':
-				file.write(offset + '  Size: ' + tstr(lamp.size))
+                if lamp.type == 'SPOT':
+                    # file.write(offset + '  falloff_type: ' + lamp.falloff_type)
+                    data['spot_size'] = lamp.spot_size
 
-def writeProperties(file, obj, offset):
-	for K in obj.keys():
-		if K not in '_RNA_UI':
-			file.write(offset+K+': ')
-			file.write('%s\n' % obj[K])
+                if lamp.type == 'AREA':
+                    data['Size'] = lamp.size
+        return out
 
-def writeRobot(file, mesh):
-	file.write('\n - Name: '+mesh.name)
-
-	parent = mesh.parent
-	axis = parent.matrix_local*mathutils.Vector((0.0, 0.0, 1.0, 0.0))
-	axis.normalize()
-	# file.write('\n   Type: '+parent["Type"])
-	file.write('\n')
-	writeProperties(file, parent,'   ')
-	file.write('   ParentJoint: ')
-	file.write('\n     Name: '+parent.name)
-	file.write('\n     Vec: '+vecToString(getVectTo(parent, mesh)))
-	file.write('\n     Axis: '+vecToString(axis))
-	# file.write('\n     Min: '+parent['Min'])
-	# file.write('\n     Max: '+parent['Max'])
-	child = mesh.children[0]
-	file.write('\n   ChildJoint: ')
-	file.write('\n     Vec: '+vecToString(getVectTo(mesh, child)))
-	if len(child.children) > 0:
-		writeRobot(file, child.children[0])
-
-
-def generateYAMLDescrFile(file, objList):
-	file.write('Objects:')
-	o = '\n '
-	for obj in objList:
-		if obj.type == 'MESH':
-			file.write('\n - Name: ' + obj.name)
-			file.write('\n   Mesh: ' + obj.data.name)
-			writePosition(file, obj, o)
-			writeQuaternion(file, obj, o)
-			writeMaterial(file, obj, o)
-
-def saveColladaFile():
-	pass
-
-
-
-#---------------------
-class ExportMyFormat(bpy.types.Operator, ExportHelper):
-	bl_idname       = "pmkscene.yml";
-	bl_label        = "PMK Scene exporter";
-	bl_options      = {'PRESET'};
-
-	filename_ext    = ".yml";
-
-	def execute(self, context):
-		file = open(self.filepath, "w", encoding='utf8')
-
-		generateYAMLDescrFile(file, bpy.data.objects)
-
-		path = os.path.dirname(self.filepath)
-		name = os.path.splitext(os.path.split(self.filepath)[1])[0]
-		if not os.path.exists(path+'\\'+name):
-			os.makedirs(path+'\\'+name)
-		offset = '\n'
-		file.write('dirname: '+ '\\' + name+ '\\' )
-		file.write('\nRobotPosition: '+vecToString(bpy.data.objects['Robot-Base'].location))
-		file.write('\nRobot:')
-		writeRobot(file, bpy.data.objects['Robot-Base'].children[0])
-		writeScene(file, bpy.data.objects, offset, path, name)
-		writeLamps(file, bpy.data.objects, '\n')
-
-		file.close()
-		return {'FINISHED'};
 
 def menu_func(self, context):
-	self.layout.operator(ExportMyFormat.bl_idname, text="PMK Scene (.yml)");
+    self.layout.operator(ExportScene.bl_idname, text="PMK Scene (.yml)");
 def register():
-	bpy.utils.register_module(__name__);
-	bpy.types.INFO_MT_file_export.append(menu_func);
+    bpy.utils.register_module(__name__);
+    bpy.types.INFO_MT_file_export.append(menu_func);
 def unregister():
-	bpy.utils.unregister_module(__name__);
-	bpy.types.INFO_MT_file_export.remove(menu_func);
+    bpy.utils.unregister_module(__name__);
+    bpy.types.INFO_MT_file_export.remove(menu_func);
 if __name__ == "__main__":
-	register()
+    register()

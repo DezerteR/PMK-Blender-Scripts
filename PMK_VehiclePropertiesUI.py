@@ -113,6 +113,9 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
         box.row().prop(obj, 'type')
         if 'Camera' == obj.type:
             box.row().prop(obj, 'cameraMode')
+            box.row().prop(obj, 'cameraFOV')
+            box.row().prop(obj, 'cameraOffset')
+            box.row().prop(obj, 'cameraInertia')
         elif 'Light' == obj.type:
             pass
         elif 'SmokeSource' == obj.type:
