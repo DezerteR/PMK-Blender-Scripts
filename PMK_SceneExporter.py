@@ -28,7 +28,7 @@ class ExportScene(bpy.types.Operator, ExportHelper):
         config = OrderedDict()
         config['Materials'] = self.getMaterials(bpy.data.materials)
         config["Objects"] = self.getObjects(bpy.data.objects)
-        ls = self.getLights(bpy.data.objects)
+        ls = self.getLights(bpy.data.lamps)
         if len(ls) > 0:
             config["LightSources"] = ls
 
@@ -50,7 +50,7 @@ class ExportScene(bpy.types.Operator, ExportHelper):
     def getMaterials(self, materials):
         out = {}
         for mat in materials:
-            out[mat.name] = {
+            out[mat.name.replace(".", "_") + "-material"] = {
                 "roughness": mat.pmk.roughness,
                 "metallic": mat.pmk.metallic,
                 "reflectance": mat.pmk.reflectance,
@@ -119,35 +119,39 @@ class ExportScene(bpy.types.Operator, ExportHelper):
 
     def getLights(self, objects):
         out = []
-        for thing in objects:
-            if thing.type == 'LAMP':
-                data = OrderedDict()
+        for lamp in objects:
+            if lamp.type != 'POINT' and lamp.type != 'SPOT':
+                continue
 
-                data['Name'] = thing.name
-                # object = bpy.data.objects[lamp.name]
-                lamp = bpy.data.lamps[thing.data.name]
+            data = OrderedDict()
 
-                m = thing.matrix_world
-                data['Position'] = OrderedDict()
-                data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
-                data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
-                data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
-                data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
-                data['Color'] = mathutils.Vector(( thing.color[0], thing.color[1], thing.color[2] ))
+            data['Name'] = lamp.name
 
-                data['Falloff_distance'] = lamp.distance
-                data['Energy'] = lamp.energy
-                data['Type'] = lamp.type
+            lampObject = bpy.data.objects[lamp.name]
 
-                if lamp.type == 'POINT':
-                    data['falloff_type'] = lamp.falloff_type
+            m = lampObject.matrix_world
+            data['Position'] = OrderedDict()
+            data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
+            data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
+            data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
+            data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+            data['Color'] = mathutils.Vector(( lamp.color[0], lamp.color[1], lamp.color[2] ))
 
-                if lamp.type == 'SPOT':
-                    # file.write(offset + '  falloff_type: ' + lamp.falloff_type)
-                    data['spot_size'] = lamp.spot_size
+            data['Falloff_distance'] = lamp.distance
+            data['Energy'] = lamp.energy
+            data['Type'] = lamp.type
 
-                if lamp.type == 'AREA':
-                    data['Size'] = lamp.size
+            if lamp.type == 'POINT':
+                data['Falloff_type'] = lamp.falloff_type
+
+            if lamp.type == 'SPOT':
+                # file.write(offset + '  falloff_type: ' + lamp.falloff_type)
+                data['spot_size'] = lamp.spot_size
+
+            if lamp.type == 'AREA':
+                data['Size'] = lamp.size
+
+            out.append(data)
         return out
 
 
