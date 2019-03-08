@@ -17,6 +17,15 @@ from bpy_extras.io_utils import ExportHelper
 from collections import OrderedDict
 import SimpleYaml
 
+def setPosition(thing, data):
+    m = thing.matrix_world
+    data['Position'] = OrderedDict()
+    data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
+    data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
+    data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
+    data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+
+
 class ExportScene(bpy.types.Operator, ExportHelper):
     bl_idname       = "pmkscene.yml";
     bl_label        = "PMK Scene exporter";
@@ -28,6 +37,8 @@ class ExportScene(bpy.types.Operator, ExportHelper):
         config = OrderedDict()
         config['Materials'] = self.getMaterials(bpy.data.materials)
         config["Objects"] = self.getObjects(bpy.data.objects)
+        config["Markers"] = self.getMarkers(bpy.data.objects)
+        config["Cameras"] = self.getCameras(bpy.data.objects)
         ls = self.getLights(bpy.data.lamps)
         if len(ls) > 0:
             config["LightSources"] = ls
@@ -60,7 +71,35 @@ class ExportScene(bpy.types.Operator, ExportHelper):
                 "emissive": mat.pmk.emissive,
             }
         return out
+    def getMarkers(self, objectList):
+        out = []
+        for obj in objectList:
+            if obj.type == 'EMPTY' and obj.pmk.propertyType == 'Marker':
+                data = OrderedDict()
+                data['Name'] = obj.name
+                data['Type'] = obj.pmk.markerProps.type
+                setPosition(obj, data)
 
+                out.append(data)
+        return out;
+
+    def getCameras(selft, objectList):
+        out = []
+        for obj in objectList:
+            if obj.type == 'CAMERA':
+                data = OrderedDict()
+                data['Name'] = obj.name
+                data['Type'] = obj.pmk.markerProps.type
+                setPosition(obj, data)
+
+                data['Mode'] = obj.pmk.markerProps.cameraMode
+                camera = obj.data
+                data['CameraType'] = camera.type
+                data['Angle'] = camera.angle
+
+                out.append(data)
+
+        return out
 
     def getObjects(self, objectList):
         out = []
@@ -70,24 +109,21 @@ class ExportScene(bpy.types.Operator, ExportHelper):
         return out
 
     def appendObject(self, thing, objectList):
-        if thing.type != 'MESH' or thing.pmk.propertyType == 'Physical':
+        if thing.type != 'MESH' or thing.pmk.propertyType != 'Scene': # colliders are not exported this way
             return
 
         data = OrderedDict()
         data['Name'] = thing.name
 
-        m = thing.matrix_world
-        data['Position'] = OrderedDict()
-        data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
-        data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
-        data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
-        data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+        setPosition(thing, data)
+        data['Dimensions'] = thing.dimensions
         # data['Texture'] = self.getTexture(thing)
         if thing.data is not None:
             data["Models"] = self.getMeshes(thing)
         data['isPhysical'] = thing.rigid_body is not None
         if thing.rigid_body is not None:
-            data['Mass'] = thing.rigid_body.mass
+            data['Mass'] = thing.rigid_body.mass if thing.rigid_body.collision_shape != 'MESH' else 0
+            data['Shape'] = thing.rigid_body.collision_shape
             data['Colliders'] = self.findPhysicalModels(thing)
 
         objectList.append(data)
@@ -129,12 +165,7 @@ class ExportScene(bpy.types.Operator, ExportHelper):
 
             lampObject = bpy.data.objects[lamp.name]
 
-            m = lampObject.matrix_world
-            data['Position'] = OrderedDict()
-            data['Position']['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
-            data['Position']['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
-            data['Position']['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
-            data['Position']['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+            setPosition(lampObject, data)
             data['Color'] = mathutils.Vector(( lamp.color[0], lamp.color[1], lamp.color[2] ))
 
             data['Falloff_distance'] = lamp.distance

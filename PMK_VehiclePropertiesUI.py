@@ -55,12 +55,12 @@ class OBJECT_PT_tank_module(bpy.types.Panel):
             layout.column().prop(obj.pmk, "isActive")
             self.layout.box().row().prop(obj.pmk.moduleProps, "moduleType", expand=False)
             # self.editModuleProps(self.layout.box(), obj.pmk.moduleProps)
-        # elif 'Collision' == obj.pmk.propertyType:
-        #     self.layout.box().row().label(text='Collison Model Properties')
-        # elif 'Armor' == obj.pmk.propertyType:
-        #     self.layout.box().row().label(text='Armor Properties')
-        # elif 'Slot' == obj.pmk.propertyType:
-        #     self.layout.box().row().label(text='Slot Properties')
+            # elif 'Collision' == obj.pmk.propertyType:
+            #     self.layout.box().row().label(text='Collison Model Properties')
+            # elif 'Armor' == obj.pmk.propertyType:
+            #     self.layout.box().row().label(text='Armor Properties')
+        elif 'Connector' == obj.pmk.propertyType:
+            self.layout.box().row().prop(obj.pmk.jointProps, "jointType", expand=False)
         elif 'Decal' == obj.pmk.propertyType:
             box = self.layout.box()
             box.column().label(text='Decal Properties')

@@ -15,6 +15,7 @@ bl_info = {
 def register():
     print('\nregistering ', 'Tank properties')
     bpy.utils.register_class(ModuleProperties)
+    bpy.utils.register_class(JointProperties)
     bpy.utils.register_class(ArmorProperties)
     bpy.utils.register_class(DecalProperties)
     bpy.utils.register_class(MarkerProperties)
@@ -27,6 +28,7 @@ def unregister():
     bpy.utils.unregister_class(MarkerProperties)
     bpy.utils.unregister_class(DecalProperties)
     bpy.utils.unregister_class(ArmorProperties)
+    bpy.utils.unregister_class(JointProperties)
     bpy.utils.unregister_class(ModuleProperties)
 
 if __name__ == "__main__":
@@ -43,12 +45,13 @@ class ModuleProperties(bpy.types.PropertyGroup):
                                        ('Turret-Part', 'Turret-Part', 'The second item', 12),
                                        ('Mantlet', 'Mantlet', 'The second item', 4),
                                        ('Gun', 'Gun', 'The third item', 5),
-                                       #  ('Suspension', 'Suspension', 'The third item', 6),
-                                       #  ('RoadWheel', 'Road Wheel', 'The third item', 7),
+                                       ('Suspension', 'Suspension', 'The third item', 6),
+                                        # ('RoadWheel', 'Road Wheel', 'The third item', 7),
                                        #  ('SupportWheel', 'Support Wheel', 'The third item', 8),
                                        #  ('DriveSprocket', 'Drive Sprocket', 'The third item', 9),
                                        #  ('IdlerWheel', 'Idler Wheel', 'The third item', 10),
                                        ('Armor', 'Armor', 'Additional armor module', 11),
+                                       ('LoosePart', 'LoosePart', 'Don\'t know what it could be', 13),
                                         ),
                                 name = "Module Type",
                                 default = 'Empty',
@@ -83,6 +86,16 @@ class ModuleProperties(bpy.types.PropertyGroup):
     # roll_influence = FloatProperty(default = 0.1, name = 'RollInfluence', min = 0.0)
     # shoe_mesh = StringProperty(default = 'Shoe', name = 'ShoeMesh')
 
+class JointProperties(bpy.types.PropertyGroup):
+    jointType = EnumProperty(items = (('Revolute', 'Revolute', '1DOF rotation around Z axis', 1),
+                                      ('Prismatic', 'Prismatic', '1DOF linear movement along Z axis', 2),
+                                      ('2DOF', '2DOF', '2DOF connection, primary around Z then around X(assuming targeting with Y axis)', 3),
+                                      ('Ball', 'Ball', '3DOF ball connection', 4)
+                    ),
+                    name = 'Joint Type',
+                    default = 'Revolute'
+                )
+
 class ArmorProperties(bpy.types.PropertyGroup):
     armorClass = FloatProperty(default = 1, name = 'Class')
 
@@ -95,6 +108,7 @@ class MarkerProperties(bpy.types.PropertyGroup):
                                  ('SmokeSource', 'SmokeSource', '', 3),
                                  ('DustSource', 'DustSource', '', 4),
                                  ('EndOfBarrel', 'End Of Barrel', '', 5),
+                                 ('SpawnPoint', 'Spawn Point', 'oint where object can be spawned at game start', 6),
                                  ),
                         name = "Type",
                         default = 'Camera')
@@ -126,11 +140,13 @@ class CommonProperties(bpy.types.PropertyGroup):
                                          ('Connector', 'Connector', 'Connects modules', 4),
                                          ('Decal', 'Decal', '...', 5),
                                          ('Marker', 'Marker', '...', 6),
+                                         ('Scene', 'Scene', '...', 8),
                                  ),
                         name = "Property Type",
                         default = 'Part')
 
     moduleProps = PointerProperty(type = ModuleProperties)
+    jointProps = PointerProperty(type = JointProperties)
     armorProps = PointerProperty(type = ArmorProperties)
     decalProps = PointerProperty(type = DecalProperties)
     markerProps = PointerProperty(type = MarkerProperties)
