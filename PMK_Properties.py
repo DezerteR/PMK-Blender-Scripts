@@ -17,10 +17,10 @@ if __name__ == '__main__':
 
 class SceneObjectProps(bpy.types.PropertyGroup):
     objectType: EnumProperty(items = (('Regular', 'Regular', 'Regular object', 1),
-                                      ('RegularSubPart', 'Terrain', 'Terrain', 2),
-                                      ('Terrain', 'Terrain', 'Terrain', 2),
-                                      ('Collider', 'Collider', 'Collider for module', 3),
-                                      ('Foliage', 'Foliage', 'Foliage', 4),
+                                      ('RegularSubPart', 'RegularSubPart', 'Regular SubPart', 2),
+                                      ('Terrain', 'Terrain', 'Terrain', 3),
+                                      ('Collider', 'Collider', 'Collider for module', 4),
+                                      ('Foliage', 'Foliage', 'Foliage', 5),
                                  ),
                         name = 'Type',
                         default = 'Regular')
