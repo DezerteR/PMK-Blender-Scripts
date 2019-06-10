@@ -35,12 +35,14 @@ class ModuleProps(bpy.types.PropertyGroup):
                         name = 'Type',
                         default = 'Module')
 
-    armorClass: FloatProperty(default = 1, name = 'Class')
+    armorClass: FloatProperty(default = 1, name = 'Class', min = 0.01, max = 20)
+    isActive = BoolProperty(name = 'Active', default = True)
 
 class EmptyProps(bpy.types.PropertyGroup):
     objectType: EnumProperty(items = (('Joint', 'Joint', 'Connects modules', 1),
                                       ('Marker', 'Marker', '...', 2),
                                       ('Decal', 'Decal', '...', 3),
+                                      ('Special', 'Special', '...', 4),
                                  ),
                         name = 'Type',
                         default = 'Marker')
@@ -61,6 +63,12 @@ class EmptyProps(bpy.types.PropertyGroup):
                         name = 'Marker Type',
                         default = 'Camera')
     decalName: StringProperty(default = '', name = 'DecalName')
+    specialName: StringProperty(default = '', name = 'SpecialName')
+    mainAxis: EnumProperty(items = (('X', 'X','', 1),
+                                    ('Y', 'Y','', 2),
+                                    ('Z', 'Z','', 3)),
+                           name = 'Axis',
+                           default = 'Z')
 
 class CameraProps(bpy.types.PropertyGroup):
     mode: EnumProperty(items = (('Free', 'Free', 'Free cam', 1),

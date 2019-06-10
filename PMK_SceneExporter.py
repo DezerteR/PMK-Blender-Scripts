@@ -3,7 +3,7 @@ bl_info = {
         'name':         'PMK Scene exporter',
         'author':       'Karol Wajs',
         'blender':      (2,80,0),
-        'version':      (0,0,1),
+        'version':      (0,1,1),
         'location':     'File > Export > PMK Scene exporter',
         'description':  'Export scene for Po-Male-Ka',
         'category':     'Import-Export'
@@ -43,7 +43,10 @@ class ExportScene(bpy.types.Operator, ExportHelper):
         if len(ls) > 0:
             config['LightSources'] = ls
 
+
+
         with open(self.filepath, 'w') as fp:
+            fp.write('# created with blender 2.8, script revision: ' + str(bl_info['version']) + '\n')
             SimpleYaml.writeYamlTo(fp, config)
 
         path = os.path.dirname(self.filepath)
@@ -85,7 +88,8 @@ class ExportScene(bpy.types.Operator, ExportHelper):
                 'Anisotropic': self.getMaterialParam(bsdf, 'Anisotropic'),
                 'AnisotropicRotation': self.getMaterialParam(bsdf, 'Anisotropic Rotation'),
                 'Clearcoat': self.getMaterialParam(bsdf, 'Clearcoat'),
-                'IOR': self.getMaterialParam(bsdf, 'IOR')
+                'IOR': self.getMaterialParam(bsdf, 'IOR'),
+                'Emissive': 0
             }
         return out
 
@@ -226,5 +230,6 @@ def register():
 def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func);
     bpy.utils.register_class(ExportScene);
+
 if __name__ == '__main__':
     register()

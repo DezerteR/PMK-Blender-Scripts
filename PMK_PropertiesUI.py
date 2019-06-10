@@ -3,13 +3,13 @@ import bpy
 import PMK_Properties
 
 bl_info = {
-    "name": "PMK Properties Panel",
-    "author": "Karol Wajs",
-    "version": (0, 0, 1),
-    "blender": (2, 80, 0),
-    "location": "Viewport",
-    "description": "Adds panel in object properties that allows editing properties.",
-    "category": "Object"
+    'name': 'PMK Properties Panel',
+    'author': 'Karol Wajs',
+    'version': (0, 0, 1),
+    'blender': (2, 80, 0),
+    'location': 'Viewport',
+    'description': 'Adds panel in object properties that allows editing properties.',
+    'category': 'Object'
     }
 
 ''' Utils:
@@ -26,16 +26,16 @@ def register():
 def unregister():
     bpy.utils.unregister_class(OBJECT_PT_PropsUI)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     register()
 
 class OBJECT_PT_PropsUI(bpy.types.Panel):
-    bl_label = "Po-Male-Ka"
-    bl_idname = "OBJECT_PT_PropsUI"
+    bl_label = 'Po-Male-Ka'
+    bl_idname = 'OBJECT_PT_PropsUI'
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_options = {'DEFAULT_CLOSED'}
-    bl_context = "object"
+    bl_context = 'object'
 
     def draw(self, context):
         layout = self.layout
@@ -55,22 +55,38 @@ class OBJECT_PT_PropsUI(bpy.types.Panel):
         elif obj.type == 'CAMERA':
             self.cameraProps(obj.pmk.cameraProps, layout)
 
-    def objectPropsForVehicle(self, props, layout):
-        pass
+    def objectPropsForVehicle(self, obj, layout):
+        if obj.type == 'MESH':
+            self.forModule(obj.pmk.moduleProps, layout)
+        elif obj.type == 'EMPTY':
+            self.emptyProps(obj.pmk.emptyProps, layout)
+        elif obj.type == 'CAMERA':
+            self.cameraProps(obj.pmk.cameraProps, layout)
+
+    def forModule(self,  moduleProps, layout):
+        layout.prop(moduleProps, 'objectType')
+        layout.prop(moduleProps, 'armorClass')
+        layout.prop(moduleProps, 'isActive')
+
+
+
 
     def sceneObjectProps(self, props, layout):
-        layout.prop(props, "objectType")
+        layout.prop(props, 'objectType')
 
     def emptyProps(self, props, layout):
-        layout.prop(props, "objectType")
+        layout.prop(props, 'objectType')
         if props.objectType == 'Joint':
-            layout.prop(props, "jointType")
+            layout.prop(props, 'jointType')
+            layout.prop(props, 'mainAxis')
         elif props.objectType == 'Marker':
-            layout.prop(props, "markerType")
+            layout.prop(props, 'markerType')
         elif props.objectType == 'Decal':
-            layout.prop(props, "decalName")
+            layout.prop(props, 'decalName')
+        elif props.objectType == 'Special':
+            layout.prop(props, 'specialName')
 
     def cameraProps(self, props, layout):
-            layout.prop(props, "mode")
-            layout.prop(props, "offset")
-            layout.prop(props, "inertia")
+            layout.prop(props, 'mode')
+            layout.prop(props, 'offset')
+            layout.prop(props, 'inertia')
