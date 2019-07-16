@@ -47,7 +47,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         root = self.findRoot(bpy.data.objects)
         config = OrderedDict()
-        config['Modules'] = []
+        config['Modules'] = OrderedDict()
         self.collectModules(config['Modules'], bpy.data.objects)
 
         config['Cameras'] = self.getCameras(bpy.data.objects)
@@ -77,7 +77,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
     def collectModules(self, outputList, collection):
         for x in collection:
             if x.type == 'MESH' and x.pmk.moduleProps.objectType == 'Module':
-                outputList.append(self.getModule(x))
+                outputList[x.name] = self.getModule(x)
 
 
     def findRoot(self, objects):
@@ -94,6 +94,9 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         output['Active'] = thing.pmk.moduleProps.isActive
         output['Servo'] = thing.pmk.moduleProps.hasServo
         output['Identifier'] = thing.pmk.identifier
+        pos  = OrderedDict()
+        setPosition(thing, pos)
+        output['Relative Position'] = pos
         if thing.pmk.moduleProps.objectType == 'Suspension':
             self.writeSuspensionProperties(config, thing)
         if thing.data is not None:
@@ -106,7 +109,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         self.appendConstraints(output, thing)
         childrenByPosition = self.groupChildrenByPosition(thing)
         if len(childrenByPosition) > 0:
-            output['Attached'] = childrenByPosition
+            output['Attached Modules'] = childrenByPosition
 
 
         return output
@@ -117,7 +120,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
                 x['Attached'].append(thing.name)
                 return
 
-        listOfSlots.append({'Attached' : [thing.name], 'Position': thingPosition})
+        listOfSlots.append({'Modules' : [thing.name], 'Position': thingPosition})
 
     def groupChildrenByPosition(self, thing):
         listOfSlots = []
@@ -176,11 +179,14 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
 
         c = thing.constraints['Limit Rotation']
 
-        output['Limits'] = [True if c.use_limit_x else False,
+        constraint = OrderedDict()
+        constraint['Limits'] = [True if c.use_limit_x else False,
                             True if c.use_limit_y else False,
                             True if c.use_limit_z else False, ]
-        output['Min'] = [c.min_x, c.min_y, c.min_z]
-        output['Max'] = [c.max_x, c.max_y, c.max_z]
+        constraint['Min'] = [c.min_x, c.min_y, c.min_z]
+        constraint['Max'] = [c.max_x, c.max_y, c.max_z]
+
+        output['Rotation constriants'] = constraint
 
     # * axis of rotation is coded in slot Z axis
     # * constraints in object constraints
@@ -387,7 +393,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
     def appendMarkers(self, config, thing):
         markers = []
         for child in thing.children:
-            if child.pmk.emptyProps.objectType == 'Marker':
+            if child.type == 'EMPTY' and child.pmk.emptyProps.objectType == 'Marker':
                 markers.append(child);
         if len(markers) == 0:
             return
