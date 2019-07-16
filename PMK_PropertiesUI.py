@@ -65,8 +65,12 @@ class OBJECT_PT_PropsUI(bpy.types.Panel):
 
     def forModule(self,  moduleProps, layout):
         layout.prop(moduleProps, 'objectType')
+        if moduleProps.objectType == 'Module':
+            layout.prop(moduleProps, 'moduleClass')
+
         layout.prop(moduleProps, 'armorClass')
         layout.prop(moduleProps, 'isActive')
+        layout.prop(moduleProps, 'hasServo')
 
 
 

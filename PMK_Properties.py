@@ -34,9 +34,20 @@ class ModuleProps(bpy.types.PropertyGroup):
                                  ),
                         name = 'Type',
                         default = 'Module')
+    moduleClass: EnumProperty(items = (('Hull', 'Hull', '', 1),
+                                       ('Turret', 'Turret', '', 2),
+                                       ('GunServo', 'GunServo', 'Functional module', 3),
+                                       ('Gun', 'Gun', 'Functional module', 4),
+                                       ('Suspension', 'Suspension', 'Functional module', 5),
+                                       ('Addon', 'Addon', 'Functional module', 6),
+                                       ('Armor', 'Armor', 'Functional module', 7),
+                                      ),
+                        name = 'Class',
+                        default = 'Hull')
 
     armorClass: FloatProperty(default = 1, name = 'Class', min = 0.01, max = 20)
-    isActive = BoolProperty(name = 'Active', default = True)
+    isActive = BoolProperty(name = 'Enabled', default = True)
+    hasServo = BoolProperty(name = 'Servo', default = False)
 
 class EmptyProps(bpy.types.PropertyGroup):
     objectType: EnumProperty(items = (('Joint', 'Joint', 'Connects modules', 1),

@@ -39,7 +39,7 @@ class ExportScene(bpy.types.Operator, ExportHelper):
         config['Markers'] = self.getMarkers(bpy.data.objects)
         config['Cameras'] = self.getCameras(bpy.data.objects)
         config['Objects'] = self.getObjects(bpy.data.objects)
-        ls = self.getLights(bpy.data.lights)
+        ls = self.getLights(bpy.data.objects)
         if len(ls) > 0:
             config['LightSources'] = ls
 
@@ -182,38 +182,40 @@ class ExportScene(bpy.types.Operator, ExportHelper):
 
     def getLights(self, objects):
         out = []
-        for lamp in objects:
+        lightObjects = [o for o in bpy.data.objects if o.type == 'LIGHT']
+
+
+        for lightObject in lightObjects:
             data = OrderedDict()
 
-            data['Name'] = lamp.name
+            light = lightObject.data
+            data['Name'] = light.name
 
-            lampObject = bpy.data.objects[lamp.name]
+            copyPosition(lightObject, data)
+            data['Color'] = mathutils.Vector(( light.color[0], light.color[1], light.color[2] ))
 
-            copyPosition(lampObject, data)
-            data['Color'] = mathutils.Vector(( lamp.color[0], lamp.color[1], lamp.color[2] ))
+            data['Power'] = light.energy
+            data['Type'] = light.type
+            data['Shadows'] = light.use_shadow
+            data['Specular'] = light.specular_factor
 
-            data['Power'] = lamp.energy
-            data['Type'] = lamp.type
-            data['Shadows'] = lamp.use_shadow
-            data['Specular'] = lamp.specular_factor
+            if light.type == 'POINT':
+                data['Radius'] = light.shadow_soft_size
+                data['CutoffDistance'] = light.cutoff_distance if light.use_custom_distance else 'none'
 
-            if lamp.type == 'POINT':
-                data['Radius'] = lamp.shadow_soft_size
-                data['CustomDistance'] = lamp.cutoff_distance if lamp.use_custom_distance else 'none'
+            elif light.type == 'SUN':
+                data['Radius'] = light.shadow_soft_size
 
-            elif lamp.type == 'SUN':
-                data['Radius'] = lamp.shadow_soft_size
+            elif light.type == 'SPOT':
+                data['SpotSize'] = light.spot_size
+                data['Blend'] = light.spot_blend
+                data['Radius'] = light.shadow_soft_size
+                data['CutoffDistance'] = light.cutoff_distance if light.use_custom_distance else 'none'
 
-            elif lamp.type == 'SPOT':
-                data['SpotSize'] = lamp.spot_size
-                data['Blend'] = lamp.spot_blend
-                data['Radius'] = lamp.shadow_soft_size
-                data['CustomDistance'] = lamp.cutoff_distance if lamp.use_custom_distance else 'none'
-
-            elif lamp.type == 'AREA':
-                data['Size'] = lamp.size
-                data['Shape'] = lamp.shape
-                data['CustomDistance'] = lamp.cutoff_distance if lamp.use_custom_distance else 'none'
+            elif light.type == 'AREA':
+                data['Size'] = light.size
+                data['Shape'] = light.shape
+                data['CutoffDistance'] = light.cutoff_distance if light.use_custom_distance else 'none'
 
 
             out.append(data)

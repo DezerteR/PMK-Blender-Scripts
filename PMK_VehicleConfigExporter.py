@@ -1,19 +1,20 @@
 ﻿
 bl_info = {
-    "name":         "PMK Vehicle File Exporter",
-    "author":       "Karol Wajs",
-    "blender":      (2,80,0),
-    "version":      (0,1,2),
-    "location":     "config > Export > Vehicle File",
-    "description":  "Export Vehicle",
-    "category":     "Import-Export"
+    'name':         'PMK Vehicle File Exporter',
+    'author':       'Karol Wajs',
+    'blender':      (2,80,0),
+    'version':      (0,2,2),
+    'location':     'config > Export > Vehicle File',
+    'description':  'Export Vehicle',
+    'category':     'Import-Export'
 }
 
-import bpy, mathutils
+import bpy, mathutils, math
 import string, os
 from collections import OrderedDict
 import SimpleYaml
 from bpy_extras.io_utils import ExportHelper
+import json
 
 def vecFromTo(a, b):
     return b.location - a.location
@@ -34,32 +35,37 @@ def setPosition(thing, data):
     data['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
     data['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
 
+def compareVectors(a, b):
+    return math.isclose(a.x, b.x) and math.isclose(a.y, b.y) and math.isclose(a.z, b.z)
+
 class ExportVehicle(bpy.types.Operator, ExportHelper):
-    bl_idname       = "vehicle_info.yaml"
-    bl_label        = "Vehicle Exporter"
+    bl_idname       = 'vehicle_info.yaml'
+    bl_label        = 'Vehicle Exporter'
     bl_options      = {'PRESET'}
-    filename_ext    = ".yml"
+    filename_ext    = '.yml'
 
     def execute(self, context):
         root = self.findRoot(bpy.data.objects)
         config = OrderedDict()
-        config["Model"] = []
-        self.collectModules(config["Model"], bpy.data.objects)
+        config['Modules'] = []
+        self.collectModules(config['Modules'], bpy.data.objects)
 
         config['Cameras'] = self.getCameras(bpy.data.objects)
         config['LightSources'] = self.getLights(bpy.data.lights)
         config['Materials'] = self.getMaterials(bpy.data.materials)
 
         with open(self.filepath, 'w') as fp:
-            fp.write('# created with blender 2.8, script revision: ' + str(bl_info['version']) + '\n')
+            fp.write('# created with blender 2.8, script revision: ' + str(bl_info['version']) + ' simplified version' + '\n')
             SimpleYaml.writeYamlTo(fp, config)
-
 
         path = os.path.dirname(self.filepath)
         name = os.path.splitext(os.path.split(self.filepath)[1])[0]
 
+        # with open(os.path.join(path, name+'.json'), 'w') as fp:
+        #     json.dump(config, fp, indent=4, sort_keys=True)
+
         bpy.ops.wm.collada_export(
-            filepath = os.path.join(path, name+".dae"),
+            filepath = os.path.join(path, name+'.dae'),
             check_existing = False,
             apply_modifiers = True,
             triangulate = True,
@@ -70,7 +76,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
 
     def collectModules(self, outputList, collection):
         for x in collection:
-            if x.type == 'MESH':
+            if x.type == 'MESH' and x.pmk.moduleProps.objectType == 'Module':
                 outputList.append(self.getModule(x))
 
 
@@ -81,27 +87,45 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
 
     def getModule(self, thing):
         output = OrderedDict()
-        output["Name"] = thing.name
-        output["ModuleType"] = str(thing.pmk.moduleProps.objectType)
-        output["ArmorClass"] = str(thing.pmk.moduleProps.armorClass)
-        output["Active"] = str(thing.pmk.moduleProps.isActive)
-        output["Identifier"] = thing.pmk.identifier
+        output['Name'] = thing.name
+        output['Type'] = str(thing.pmk.moduleProps.objectType)
+        output['Class'] = str(thing.pmk.moduleProps.moduleClass)
+        output['ArmorClass'] = str(thing.pmk.moduleProps.armorClass)
+        output['Active'] = thing.pmk.moduleProps.isActive
+        output['Servo'] = thing.pmk.moduleProps.hasServo
+        output['Identifier'] = thing.pmk.identifier
         if thing.pmk.moduleProps.objectType == 'Suspension':
             self.writeSuspensionProperties(config, thing)
         if thing.data is not None:
-            output["Models"] = self.getMeshes(thing)
+            output['Models'] = self.getMeshes(thing)
 
         self.appendDecals(output, thing)
         self.appendMarkers(output, thing)
         self.appendPhysical(output, thing)
 
-        if thing.parent:
-            self.appendConstraints(output, thing.parent, thing)
-        else:
-            output["FromParentToOrigin"] = mathutils.Vector((0,0,0))
-        self.appendJoints(output, thing)
+        self.appendConstraints(output, thing)
+        childrenByPosition = self.groupChildrenByPosition(thing)
+        if len(childrenByPosition) > 0:
+            output['Attached'] = childrenByPosition
+
 
         return output
+
+    def putIntoList(self, listOfSlots, thing, thingPosition):
+        for x in listOfSlots:
+            if compareVectors(x['Position'], thingPosition):
+                x['Attached'].append(thing.name)
+                return
+
+        listOfSlots.append({'Attached' : [thing.name], 'Position': thingPosition})
+
+    def groupChildrenByPosition(self, thing):
+        listOfSlots = []
+        for child in thing.children:
+            if child.type == 'MESH' and child.pmk.moduleProps.objectType == 'Module':
+                self.putIntoList(listOfSlots, child, vecFromTo(thing, child))
+        return listOfSlots
+
 
     # * find all meshes with type{Module, Part} directly connected to object, they have to be merged in one in engine
     def getMeshes(self, thing):
@@ -116,10 +140,10 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
     def appendPhysical(self, config, thing):
         if thing.rigid_body is None: return
 
-        config["Physical"] = {}
-        config["Physical"]["Mass"] = thing.rigid_body.mass
+        config['Physical'] = {}
+        config['Physical']['Mass'] = thing.rigid_body.mass
         models = self.findPhysicalModels(thing)
-        if len(models) > 0 :config["Physical"]["CollisionModels"] = models
+        if len(models) > 0 :config['Physical']['CollisionModels'] = models
         # TODO: add bounding box
 
     def findPhysicalModels(self, thing):
@@ -140,46 +164,43 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
     def appendJoints(self, config, thing):
         joints = self.getJoints(thing)
         if len(joints) > 0:
-            config["Joints"] = []
+            config['Joints'] = []
             for slot in joints:
-                config["Joints"].append(self.getJointProps(slot, thing))
+                config['Joints'].append(self.getJointProps(slot, thing))
 
     # * I didn't found usage for linear constraints
     # * lack of limits means that connection is rigid
-    def appendConstraints(self, output, parentSlot, thing):
-        output["ParentType"] = parentSlot.type
-        output["FromParentToOrigin"] = vecFromTo(parentSlot, thing)
-
-        if not "Limit Rotation" in thing.constraints:
+    def appendConstraints(self, output, thing):
+        if not 'Limit Rotation' in thing.constraints:
             return
 
-        c = thing.constraints["Limit Rotation"]
+        c = thing.constraints['Limit Rotation']
 
-        output["Limits"] = [True if c.use_limit_x else False,
+        output['Limits'] = [True if c.use_limit_x else False,
                             True if c.use_limit_y else False,
                             True if c.use_limit_z else False, ]
-        output["Min"] = [c.min_x, c.min_y, c.min_z]
-        output["Max"] = [c.max_x, c.max_y, c.max_z]
+        output['Min'] = [c.min_x, c.min_y, c.min_z]
+        output['Max'] = [c.max_x, c.max_y, c.max_z]
 
     # * axis of rotation is coded in slot Z axis
     # * constraints in object constraints
     def getJointProps(self, slot, parentThing):
         out = OrderedDict()
-        out["Name"] = slot.name
-        out["Type"] = slot.pmk.emptyProps.jointType
-        out["MainAxis"] = slot.pmk.emptyProps.mainAxis
+        out['Name'] = slot.name
+        out['Type'] = slot.pmk.emptyProps.jointType
+        out['MainAxis'] = slot.pmk.emptyProps.mainAxis
         m = slot.matrix_local
         # * need to get axes of local coordinates
-        out["X"] = mathutils.Vector(( m[0][0], m[1][0], m[2][0] ))
-        out["Y"] = mathutils.Vector(( m[0][1], m[1][1], m[2][1] ))
-        out["Z"] = mathutils.Vector(( m[0][2], m[1][2], m[2][2] ))
-        out["W"] = mathutils.Vector(( m[0][3], m[1][3], m[2][3] ))
+        out['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0] ))
+        out['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1] ))
+        out['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2] ))
+        out['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3] ))
 
         if len(slot.children) > 0:
             constraintAxis = mathutils.Vector()
-            out["Pinned"] = []
+            out['Pinned'] = []
             for pinned in slot.children:
-                out["Pinned"].append(pinned.name)
+                out['Pinned'].append(pinned.name)
 
         return out
 
@@ -230,7 +251,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
                 copyPosition(obj, data)
 
                 data['Parent'] = obj.parent.name
-                data["FromParentToOrigin"] = vecFromTo(obj.parent, obj)
+                data['FromParentToOrigin'] = vecFromTo(obj.parent, obj)
 
                 out.append(data)
 
@@ -247,7 +268,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
                 lampObject = bpy.data.objects[lamp.name]
 
                 data['Parent'] = obj.parent.name
-                data["FromParentToOrigin"] = vecFromTo(obj.parent, obj)
+                data['FromParentToOrigin'] = vecFromTo(obj.parent, obj)
 
                 copyPosition(lampObject, data)
                 data['Color'] = mathutils.Vector(( lamp.color[0], lamp.color[1], lamp.color[2] ))
@@ -282,9 +303,9 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
     # * first left side, from begining
     def get_connection(self, thing, to_origin):
         res = OrderedDict()
-        res["toOrigin"] = to_origin
-        res["MaxV"] = 15
-        res["Limits"] = [-15, 15]
+        res['toOrigin'] = to_origin
+        res['MaxV'] = 15
+        res['Limits'] = [-15, 15]
 
         return res
     def sort_wheels(self, wheels):
@@ -301,44 +322,44 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         drive_sprocket = self.get_type(thing, 'DriveSprocket')
         idler_wheel = self.get_type(thing, 'IdlerWheel')
 
-        config["ShoeMesh"] = thing.pmk.moduleProps.shoe_mesh
-        config["toOrigin"] = vec_to_str_1(thing.location)
-        config["Stiffness"] = 10 #thing.pmk.stiffness
-        config["Damping"] = 1 #thing.pmk.damping
-        config["Compression"] = 1 #thing.pmk.compression
-        config["MaxTravel"] = 0.5 #thing.pmk.max_travel
+        config['ShoeMesh'] = thing.pmk.moduleProps.shoe_mesh
+        config['toOrigin'] = vec_to_str_1(thing.location)
+        config['Stiffness'] = 10 #thing.pmk.stiffness
+        config['Damping'] = 1 #thing.pmk.damping
+        config['Compression'] = 1 #thing.pmk.compression
+        config['MaxTravel'] = 0.5 #thing.pmk.max_travel
 
-        config["RoadWheels"] = []
+        config['RoadWheels'] = []
         for it in road_wheels:
-            config["RoadWheels"].append({
-                "Name"      : it.name,
-                "Axis"      : it.matrix_world*vecRight,
-                "Dimension" : it.dimensions,
-                "Position"  : it.location
+            config['RoadWheels'].append({
+                'Name'      : it.name,
+                'Axis'      : it.matrix_world*vecRight,
+                'Dimension' : it.dimensions,
+                'Position'  : it.location
             })
-        config["SupportWheels"] = []
+        config['SupportWheels'] = []
         for it in road_wheels:
-            config["SupportWheels"].append({
-                "Name"      : it.name,
-                "Axis"      : it.matrix_world*vecRight,
-                "Dimension" : it.dimensions,
-                "Position"  : it.location
+            config['SupportWheels'].append({
+                'Name'      : it.name,
+                'Axis'      : it.matrix_world*vecRight,
+                'Dimension' : it.dimensions,
+                'Position'  : it.location
             })
-        config["DriveSprocket"] = []
+        config['DriveSprocket'] = []
         for it in road_wheels:
-            config["DriveSprocket"].append({
-                "Name"      : it.name,
-                "Axis"      : it.matrix_world*vecRight,
-                "Dimension" : it.dimensions,
-                "Position"  : it.location
+            config['DriveSprocket'].append({
+                'Name'      : it.name,
+                'Axis'      : it.matrix_world*vecRight,
+                'Dimension' : it.dimensions,
+                'Position'  : it.location
             })
-        config["IdlerWheel"] = []
+        config['IdlerWheel'] = []
         for it in road_wheels:
-            config["IdlerWheel"].append({
-                "Name"      : it.name,
-                "Axis"      : it.matrix_world*vecRight,
-                "Dimension" : it.dimensions,
-                "Position"  : it.location
+            config['IdlerWheel'].append({
+                'Name'      : it.name,
+                'Axis'      : it.matrix_world*vecRight,
+                'Dimension' : it.dimensions,
+                'Position'  : it.location
             })
 
     def appendDecals(self, config, thing):
@@ -349,18 +370,18 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         if len(decals) == 0:
             return
 
-        config["Decals"] = []
+        config['Decals'] = []
         for decal in decals:
             locx = decal.matrix_local*vecRight
             locx.normalize()
             locz = decal.matrix_local*vecUp
             locz.normalize()
-            config["Decals"].append({
-                "Layer"     : decal.pmk.decalProps.decalName,
-                "Scale"     : decal.scale,
-                "Position"  : vecFromTo(decal, thing),
-                "LocX"      : locx,
-                "LocZ"      : loc
+            config['Decals'].append({
+                'Layer'     : decal.pmk.decalProps.decalName,
+                'Scale'     : decal.scale,
+                'Position'  : vecFromTo(decal, thing),
+                'LocX'      : locx,
+                'LocZ'      : loc
             })
 
     def appendMarkers(self, config, thing):
@@ -371,25 +392,25 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         if len(markers) == 0:
             return
 
-        config["Markers"] = []
+        config['Markers'] = []
         for marker in markers:
             m = OrderedDict()
             loc = marker.matrix_local
-            m["Type"] = marker.pmk.emptyProps.markerType
+            m['Type'] = marker.pmk.emptyProps.markerType
             setPosition(marker, m)
 
             # if 'Camera' == marker.pmk.emptyProps.markerType:
-            #     m["Mode"] = marker.pmk.cameraProps.mode
-            #     m["Offset"] = mathutils.Vector((marker.pmk.cameraProps.offset[0], marker.pmk.cameraProps.offset[1], marker.pmk.cameraProps.offset[2]))
-            #     m["Inertia"] = marker.pmk.cameraProps.inertia
+            #     m['Mode'] = marker.pmk.cameraProps.mode
+            #     m['Offset'] = mathutils.Vector((marker.pmk.cameraProps.offset[0], marker.pmk.cameraProps.offset[1], marker.pmk.cameraProps.offset[2]))
+            #     m['Inertia'] = marker.pmk.cameraProps.inertia
             #     camera = marker.data
             #     m['CameraType'] = camera.type
             #     m['Angle'] = camera.angle
 
-            config["Markers"].append(m)
+            config['Markers'].append(m)
 
 def menu_func(self, context):
-    self.layout.operator(ExportVehicle.bl_idname, text="PMK Vehicle (.yml)")
+    self.layout.operator(ExportVehicle.bl_idname, text='PMK Vehicle (.yml)')
 
 def register():
     bpy.utils.register_class(ExportVehicle)
@@ -399,5 +420,5 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func)
     bpy.utils.unregister_class(ExportVehicle)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     register()
