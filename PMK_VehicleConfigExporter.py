@@ -28,7 +28,14 @@ vecUp = mathutils.Vector((0.0, 0.0, 1.0, 0.0))
 vecForward = mathutils.Vector((0.0, 1.0, 0.0, 0.0))
 zeroPosition = mathutils.Vector((0.0, 0.0, 0.0, 1.0))
 
-def setPosition(thing, data):
+def setRelativeToParentPosition(thing, data):
+    m = thing.matrix_local
+    data['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
+    data['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
+    data['Z'] = mathutils.Vector(( m[0][2], m[1][2], m[2][2], 0))
+    data['W'] = mathutils.Vector(( m[0][3], m[1][3], m[2][3], 1))
+
+def getAndSetWorldPosition(thing, data):
     m = thing.matrix_world
     data['X'] = mathutils.Vector(( m[0][0], m[1][0], m[2][0], 0))
     data['Y'] = mathutils.Vector(( m[0][1], m[1][1], m[2][1], 0))
@@ -94,9 +101,11 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         output['Active'] = thing.pmk.moduleProps.isActive
         output['Servo'] = thing.pmk.moduleProps.hasServo
         output['Identifier'] = thing.pmk.identifier
+
         pos  = OrderedDict()
-        setPosition(thing, pos)
+        setRelativeToParentPosition(thing, pos)
         output['Relative Position'] = pos
+
         if thing.pmk.moduleProps.objectType == 'Suspension':
             self.writeSuspensionProperties(config, thing)
         if thing.data is not None:
@@ -105,12 +114,12 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         self.appendDecals(output, thing)
         self.appendMarkers(output, thing)
         self.appendPhysical(output, thing)
-
+        self.appendCamers(output, thing)
         self.appendConstraints(output, thing)
+
         childrenByPosition = self.groupChildrenByPosition(thing)
         if len(childrenByPosition) > 0:
             output['Attached Modules'] = childrenByPosition
-
 
         return output
 
@@ -121,6 +130,16 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
                 return
 
         listOfSlots.append({'Modules' : [thing.name], 'Position': thingPosition})
+
+    def appendCamers(self, output, thing):
+        cameras = []
+
+        for child in thing.children:
+            if child.type == 'CAMERA':
+                cameras.append(child.name)
+        if len(cameras) > 0:
+            output["Cameras"] = cameras
+
 
     def groupChildrenByPosition(self, thing):
         listOfSlots = []
@@ -171,6 +190,10 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
             for slot in joints:
                 config['Joints'].append(self.getJointProps(slot, thing))
 
+    def isAxisControlled(self, constraint, idx):
+        if constraint['Limits'][idx] == False:
+            return True
+        return not math.isclose(constraint['Min'][idx], constraint['Max'][idx])
     # * I didn't found usage for linear constraints
     # * lack of limits means that connection is rigid
     def appendConstraints(self, output, thing):
@@ -182,9 +205,12 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         constraint = OrderedDict()
         constraint['Limits'] = [True if c.use_limit_x else False,
                             True if c.use_limit_y else False,
-                            True if c.use_limit_z else False, ]
+                            True if c.use_limit_z else False ]
         constraint['Min'] = [c.min_x, c.min_y, c.min_z]
         constraint['Max'] = [c.max_x, c.max_y, c.max_z]
+        constraint['Axis'] = [self.isAxisControlled(constraint, 0),
+                             self.isAxisControlled(constraint, 1),
+                             self.isAxisControlled(constraint, 2) ]
 
         output['Rotation constriants'] = constraint
 
@@ -243,7 +269,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
         return out
 
     def getCameras(selft, objectList):
-        out = []
+        out = OrderedDict()
         for obj in objectList:
             if obj.type == 'CAMERA' and obj.parent:
                 camera = obj.data
@@ -251,15 +277,17 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
                 data['Name'] = obj.name
                 data['Mode'] = obj.pmk.cameraProps.mode
                 data['Inertia'] = obj.pmk.cameraProps.inertia
-                data['Offset'] = obj.pmk.cameraProps.offset
+                data['Offset'] = mathutils.Vector((obj.pmk.cameraProps.offset[0],
+                                                   obj.pmk.cameraProps.offset[1],
+                                                   obj.pmk.cameraProps.offset[2]))
                 data['CameraType'] = camera.type
                 data['Angle'] = camera.angle
-                copyPosition(obj, data)
-
                 data['Parent'] = obj.parent.name
-                data['FromParentToOrigin'] = vecFromTo(obj.parent, obj)
 
-                out.append(data)
+                data['Relative Position'] = OrderedDict()
+                setRelativeToParentPosition(obj, data['Relative Position'])
+
+                out[obj.name] = data
 
         return out
 
@@ -403,7 +431,7 @@ class ExportVehicle(bpy.types.Operator, ExportHelper):
             m = OrderedDict()
             loc = marker.matrix_local
             m['Type'] = marker.pmk.emptyProps.markerType
-            setPosition(marker, m)
+            setRelativeToParentPosition(marker, m)
 
             # if 'Camera' == marker.pmk.emptyProps.markerType:
             #     m['Mode'] = marker.pmk.cameraProps.mode

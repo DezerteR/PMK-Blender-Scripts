@@ -89,7 +89,7 @@ class CameraProps(bpy.types.PropertyGroup):
                                  ),
                         name = 'Mode',
                         default = 'CopyPosition')
-    offset: FloatVectorProperty(default = (0,0,0), name = 'Offset', min = -5, max = 23)
+    offset: FloatVectorProperty(default = (0,0,0), name = 'Offset', min = -4, max = 23, size = 3)
     inertia: FloatProperty(default = 1, name = 'Inertia', min = 0, max = 50)
 
 class ObjectProps(bpy.types.PropertyGroup):
